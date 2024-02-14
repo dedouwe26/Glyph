@@ -4,7 +4,7 @@ namespace Glyph
     {
         public bool exists = false;
         public string toText() {
-            
+            return "";
         }
     }
 
