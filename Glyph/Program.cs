@@ -2,9 +2,20 @@
 {
     public static class Program
     {
-        public static Glyph currentGlyph = new();
+        public static Glyph? currentGlyph;
         public static bool closed = false;
         public static void Main(string[] args) {
+            if (args.Length != 1) {
+                Console.WriteLine("Usage: Glyph [file]");
+                return;
+            }
+            if (!System.IO.File.Exists(args[0])) {
+                Console.WriteLine($"File not found: {args[0]}");
+                return;
+            }
+            currentGlyph = new(args[0]);
+            // currentGlyph.file.Parse();
+
             Console.CancelKeyPress += (sender, e) =>
             {
                 e.Cancel = true;
@@ -15,23 +26,17 @@
             {
                 ConsoleKeyInfo key = Console.ReadKey(true);
                 OnCommand(key);
-                // Update();
                 
             }
             currentGlyph.Exit();
         }
-
-        public static void Update() {
-            Console.ResetColor();
-            currentGlyph.Draw();
-        }
         public static void OnCommand(ConsoleKeyInfo key) {
             if (key.Modifiers == ConsoleModifiers.Control) {
                 if (key.Key == ConsoleKey.X) {
-                    closed = currentGlyph.Exit();
+                    closed = currentGlyph!.Exit();
                     return;
                 }
-                if (currentGlyph.colorPaletteState!=0) {return;}
+                if (currentGlyph!.colorPaletteState!=0) {return;}
                 if (key.Key == ConsoleKey.S) {
                     currentGlyph.Save();
                 } else if (key.Key == ConsoleKey.E) {
@@ -40,12 +45,16 @@
                     currentGlyph.ShowMarkerPalette();
                 } else if (key.Key == ConsoleKey.F) {
                     currentGlyph.From();
-                } else if (key.Key == ConsoleKey.D) {
-                    currentGlyph.Load();
+                } else if (key.Key == ConsoleKey.B) {
+                    currentGlyph.Bold();
+                } else if (key.Key == ConsoleKey.I) {
+                    currentGlyph.Itallic();
+                } else if (key.Key == ConsoleKey.U) {
+                    currentGlyph.Underline();
                 }
             }
-            else if (key.Modifiers == 0) {
-                if (currentGlyph.colorPaletteState!=0) {
+            else if (key.Modifiers == 0 || key.Modifiers == ConsoleModifiers.Shift) {
+                if (currentGlyph!.colorPaletteState!=0) {
                     currentGlyph.ChooseColor(key.KeyChar);
                 } else if (key.Key == ConsoleKey.UpArrow) {
                     currentGlyph.CursorUp();
