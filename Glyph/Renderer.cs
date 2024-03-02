@@ -2,7 +2,7 @@ namespace Glyph
 {
     using Style = string[];
     public struct Character {
-        public required char character = ' ';
+        public required char character;
         public Color bg = Color.Black;
         public Color fg = Color.White;
         public bool bold = false;

@@ -14,19 +14,19 @@
                 return;
             }
             currentGlyph = new(args[0]);
-            // currentGlyph.file.Parse();
 
-            Console.CancelKeyPress += (sender, e) =>
-            {
+            Console.CancelKeyPress += (sender, e) => {
                 e.Cancel = true;
             };
+
             Console.CursorVisible = false;
             currentGlyph.Setup();
             while (!closed)
             {
                 ConsoleKeyInfo key = Console.ReadKey(true);
-                OnCommand(key);
-                
+                if (!Console.IsInputRedirected) {
+                    OnCommand(key);
+                }
             }
             currentGlyph.Exit();
         }
@@ -37,20 +37,20 @@
                     return;
                 }
                 if (currentGlyph!.colorPaletteState!=0) {return;}
-                if (key.Key == ConsoleKey.S) {
-                    currentGlyph.Save();
+                if (key.Key == ConsoleKey.Z) {
+                    currentGlyph!.Save();
                 } else if (key.Key == ConsoleKey.E) {
-                    currentGlyph.ShowColorPalette();
+                    currentGlyph!.ShowColorPalette();
                 } else if (key.Key == ConsoleKey.W) {
-                    currentGlyph.ShowMarkerPalette();
+                    currentGlyph!.ShowMarkerPalette();
                 } else if (key.Key == ConsoleKey.F) {
-                    currentGlyph.From();
+                    currentGlyph!.From();
                 } else if (key.Key == ConsoleKey.B) {
-                    currentGlyph.Bold();
+                    currentGlyph!.Bold();
                 } else if (key.Key == ConsoleKey.I) {
-                    currentGlyph.Itallic();
+                    currentGlyph!.Itallic();
                 } else if (key.Key == ConsoleKey.U) {
-                    currentGlyph.Underline();
+                    currentGlyph!.Underline();
                 }
             }
             else if (key.Modifiers == 0 || key.Modifiers == ConsoleModifiers.Shift) {
