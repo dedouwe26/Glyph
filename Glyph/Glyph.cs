@@ -1,6 +1,4 @@
 using System.Globalization;
-using System.Reflection.Metadata.Ecma335;
-using System.Runtime.Serialization;
 
 namespace Glyph
 {
@@ -172,23 +170,11 @@ namespace Glyph
             }
         }
 
-        public bool UpdateScroll((int X, int Y) offset) {
-            int height = Console.WindowHeight-1;
-            int width = 1+Console.WindowHeight.ToString().Length-(cursor.Y+1).ToString().Length+1+(cursor.Y+1).ToString().Length;
-            if (cursor.Y + offset.Y - scroll.Y >= height) {
-                scroll.Y++;
-                return true;
-            } else if (cursor.Y + offset.Y - scroll.Y < 0) {
-                scroll.Y--;
-                return true;
-            } else if (cursor.X + offset.X - scroll.X >= width) {
-                scroll.X++;
-                return true;
-            } else if (cursor.X + offset.X - scroll.X < 0) {
-                scroll.X--;
-                return true;
-            }
-            return false;
+        public void UpdateScroll((int X, int Y) offset) {
+            if (scroll.X+offset.X < 0 || scroll.Y+offset.Y < 0) { return; }
+            scroll.X+=offset.X;
+            scroll.Y+=offset.Y;
+            Draw();
         }
         public void UpdateLine(int y) {
             int spaces = Console.WindowHeight.ToString().Length-(y+1+scroll.Y).ToString().Length+1;
@@ -196,18 +182,13 @@ namespace Glyph
             for (int j = 0; j < offsetX; j++) {
                 Renderer.Set(new Character{character=((y+1+scroll.Y).ToString()+new string(' ', spaces)+(text.Count >= y+scroll.Y+1 ? "\u2503" : "\u2507"))[j], fg=Color.Gray, bg=new Color(1, 16, 41)}, j, y+1-scroll.Y);
             }
-            for (int j = 0; j < Console.WindowWidth-offsetX; j++) {
-                
-                if (text.Count > y+scroll.Y) {
-                    if (text[y+scroll.Y].Count > j) {
-                        if (j+offsetX-scroll.X < 0||y+1-scroll.Y < 0) { continue; }
-                        Renderer.Set(text[y+scroll.Y][j], j+offsetX-scroll.X, y+1-scroll.Y);
-                    } else {
-                        Renderer.Set(new Character{character=' ', fg=Color.White}, j+offsetX, y+1-scroll.Y);
-                    }
-                } else {
-                    Renderer.Set(new Character{character=' '}, j+offsetX-scroll.X, y+1-scroll.Y);
-                }
+            for (int x = 0; x < Console.WindowWidth-offsetX; x++) {
+                if (x-scroll.X < offsetX || y-scroll.Y < 1) { return; }
+                // To check: Return when: x-scroll.x < 0 || y-scroll.y < 0
+                // To get:      x=x+scroll.x y=y+scroll.y
+                // To set:      x=x+offsetX-scroll.x y=y+1-scroll.y
+                Character character = text.Count > y+scroll.Y ? text[y+scroll.Y].Count > x+scroll.X ? text[y+scroll.Y][x+scroll.X] : new Character{character=' '} : new Character{character=' '};
+                Renderer.Set(character, x+offsetX-scroll.X, y+1-scroll.Y);
             }
             if (cursor.Y==y+scroll.Y) {
                 int cursorOffset = 1+Console.WindowHeight.ToString().Length-(cursor.Y+1).ToString().Length+1+(cursor.Y+1).ToString().Length;
@@ -234,12 +215,6 @@ namespace Glyph
                     Renderer.Set(text[fromCursor.Y.Value][fromCursor.X.Value], 1+Console.WindowHeight.ToString().Length-(fromCursor.Y.Value+1).ToString().Length+1+(fromCursor.Y.Value+1).ToString().Length+fromCursor.X.Value-scroll.X, fromCursor.Y.Value+1-scroll.Y);
                     fromCursor = (null, null);
                 }
-            }
-
-            if (UpdateScroll(offset)) {
-
-                Draw();
-                return;
             }
 
             int cursorOffset = 1+Console.WindowHeight.ToString().Length-(cursor.Y+1).ToString().Length+1+(cursor.Y+1).ToString().Length;

@@ -56,6 +56,16 @@
             else if (key.Modifiers == 0 || key.Modifiers == ConsoleModifiers.Shift) {
                 if (currentGlyph!.colorPaletteState!=0) {
                     currentGlyph.ChooseColor(key.KeyChar);
+                } else if (key.Modifiers == ConsoleModifiers.Shift) {
+                    if (key.Key == ConsoleKey.UpArrow) {
+                        currentGlyph.UpdateScroll((0, 1));
+                    } else if (key.Key == ConsoleKey.DownArrow) {
+                        currentGlyph.UpdateScroll((0, -1));
+                    } else if (key.Key == ConsoleKey.LeftArrow) {
+                        currentGlyph.UpdateScroll((-1, 0));
+                    } else if (key.Key == ConsoleKey.RightArrow) {
+                        currentGlyph.UpdateScroll((1, 0));
+                    }
                 } else if (key.Key == ConsoleKey.UpArrow) {
                     currentGlyph.CursorUp();
                 } else if (key.Key == ConsoleKey.DownArrow) {
