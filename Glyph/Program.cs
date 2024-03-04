@@ -1,9 +1,12 @@
-﻿namespace Glyph
+﻿using System.Text;
+
+namespace Glyph
 {
     public static class Program
     {
         public static bool closed = false;
         public static void Main(string[] args) {
+            Console.OutputEncoding = Encoding.UTF8;
             if (args.Length != 1) {
                 Console.WriteLine("Usage: Glyph [file]");
                 return;
