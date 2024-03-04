@@ -3,22 +3,19 @@ using System.Globalization;
 namespace Glyph
 {
     public delegate Character CharacterChanger (Character character, int X, int Y);
-    public class Glyph
+    public static class Glyph
     {
-        public (int X, int Y) cursor = (0, 0);	
-        public (int? X, int? Y) fromCursor = (null, null);
-        public (int X, int Y) scroll = (0, 0);
-        public byte colorPaletteState = 0;
-        public string? colorPaletteCode = null;
-        public File file;
-        private Timer? timer;
-        public List<List<Character>> text;
-        public Glyph(string path) {
-            file = new File(path);
+        public static byte colorPaletteState = 0;
+        public static string? colorPaletteCode = null;
+        public static File? file;
+        private static Timer? timer;
+        public static List<List<Character>> text = new();
+        public static void Load(string path) {
+            file = new(path);
             text = file.Parse();
         }
-        public void Save() {
-            file.Write(text);
+        public static void Save() {
+            file!.Write(text);
             for (int i = 0; i < "Saved".Length; i++) {
                 Renderer.Set(new Character{character="Saved"[i], fg= Color.Orange, bg=new Color(1, 16, 41)}, i, 0);
             }
@@ -29,8 +26,8 @@ namespace Glyph
                 }
             }, null, TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(-1));
         }
-        public void ShowColorPalette() {
-            if (fromCursor==(null, null)) { return; }
+        public static void ShowColorPalette() {
+            if (Cursor.from==(null, null)) { return; }
             colorPaletteState = 1;
             for (int i = 0; i < Color.fgColors.Length; i++) {
                 char symbol = (char)(i+'a');
@@ -38,8 +35,8 @@ namespace Glyph
             }
             Renderer.Set(new Character{character='.',bg=Color.DarkGray}, 0, 2);
         }
-        public void ShowMarkerPalette() {
-            if (fromCursor==(null, null)) { return; }
+        public static void ShowMarkerPalette() {
+            if (Cursor.from==(null, null)) { return; }
             colorPaletteState = 2;
             for (int i = 0; i < Color.bgColors.Length; i++) {
                 char symbol = (char)(i+'a');
@@ -47,7 +44,7 @@ namespace Glyph
             }
             Renderer.Set(new Character{character='.',bg=Color.DarkGray}, 0, 2);
         }
-        public void ShowHexCodePalette() {
+        public static void ShowHexCodePalette() {
             if (colorPaletteCode==null) {return;}
             Renderer.Set([
                 new Character{character=colorPaletteCode.Length >= 1 ? colorPaletteCode[0] : ' ',bg=Color.DarkRed}, new Character{character=colorPaletteCode.Length >= 2 ? colorPaletteCode[1] : ' ',bg=Color.DarkRed}, 
@@ -55,7 +52,7 @@ namespace Glyph
                 new Character{character=colorPaletteCode.Length >= 5 ? colorPaletteCode[4] : ' ',bg=Color.DarkBlue}, new Character{character=colorPaletteCode.Length >= 6 ? colorPaletteCode[5] : ' ',bg=Color.DarkBlue}
             ], 0, 1);
         }
-        public void ChooseColor(char key) {
+        public static void ChooseColor(char key) {
             Color color;
             if (key=='.') {
                 colorPaletteCode="";
@@ -71,7 +68,7 @@ namespace Glyph
                         color = new(byte.Parse(colorPaletteCode[..2], NumberStyles.HexNumber), byte.Parse(colorPaletteCode.Substring(2, 2), NumberStyles.HexNumber), byte.Parse(colorPaletteCode.Substring(4, 2), NumberStyles.HexNumber));
                     }
                     catch (FormatException) {
-                        fromCursor = (null, null);
+                        Cursor.from = (null, null);
                         colorPaletteState = 0;
                         colorPaletteCode = null;
                         Draw();
@@ -88,19 +85,19 @@ namespace Glyph
                     return character with {bg = color};
                 }
             });
-            fromCursor = (null, null);
+            Cursor.from = (null, null);
             colorPaletteState = 0;
             colorPaletteCode = null;
             Draw();
             
         }
-        public void Selection(CharacterChanger changer) {
-            if (fromCursor.X == null || fromCursor.Y == null) {return;}
-            int x=fromCursor.X.Value;
-            int y=fromCursor.Y.Value;
-            while (x!=cursor.X || y!=cursor.Y) {
+        public static void Selection(CharacterChanger changer) {
+            if (Cursor.from.X == null || Cursor.from.Y == null) {return;}
+            int x=Cursor.from.X.Value;
+            int y=Cursor.from.Y.Value;
+            while (x!=Cursor.X || y!=Cursor.Y) {
                 text[y][x] = changer.Invoke(text[y][x], x, y);
-                if (x == text[y].Count-1 && y!=cursor.Y) {
+                if (x == text[y].Count-1 && y!=Cursor.Y) {
                     x = 0;
                     y++;
                 } else {
@@ -108,155 +105,95 @@ namespace Glyph
                 }
             }
         }
-        public void Bold() {
-            if (fromCursor.X == null || fromCursor.Y == null) {return;}
+        public static void Bold() {
+            if (Cursor.from.X == null || Cursor.from.Y == null) {return;}
             Selection((Character character, int X, int Y) => {
                 Renderer.Set(character with {bold=!character.bold}, 1+Console.WindowHeight.ToString().Length-(Y+1).ToString().Length+1+(Y+1).ToString().Length+X, Y+1);
                 return character with {bold=!character.bold};
             });
-            Renderer.Set(text[fromCursor.Y.Value][fromCursor.X.Value], 1+Console.WindowHeight.ToString().Length-(fromCursor.Y.Value+1).ToString().Length+1+(fromCursor.Y.Value+1).ToString().Length+fromCursor.X.Value, fromCursor.Y.Value+1);
-            fromCursor=(null, null);
+            Renderer.Set(text[Cursor.from.Y.Value][Cursor.from.X.Value], 1+Console.WindowHeight.ToString().Length-(Cursor.from.Y.Value+1).ToString().Length+1+(Cursor.from.Y.Value+1).ToString().Length+Cursor.from.X.Value, Cursor.from.Y.Value+1);
+            Cursor.from=(null, null);
         }
-        public void Itallic() {
-            if (fromCursor.X == null || fromCursor.Y == null) {return;}
+        public static void Itallic() {
+            if (Cursor.from.X == null || Cursor.from.Y == null) {return;}
             Selection((Character character, int X, int Y) => {
                 Renderer.Set(character with {itallic=!character.itallic}, 1+Console.WindowHeight.ToString().Length-(Y+1).ToString().Length+1+(Y+1).ToString().Length+X, Y+1);
                 return character with {itallic=!character.itallic};
             });
-            Renderer.Set(text[fromCursor.Y.Value][fromCursor.X.Value], 1+Console.WindowHeight.ToString().Length-(fromCursor.Y.Value+1).ToString().Length+1+(fromCursor.Y.Value+1).ToString().Length+fromCursor.X.Value, fromCursor.Y.Value+1);
-            fromCursor=(null, null);
+            Renderer.Set(text[Cursor.from.Y.Value][Cursor.from.X.Value], 1+Console.WindowHeight.ToString().Length-(Cursor.from.Y.Value+1).ToString().Length+1+(Cursor.from.Y.Value+1).ToString().Length+Cursor.from.X.Value, Cursor.from.Y.Value+1);
+            Cursor.from=(null, null);
         }
-        public void Underline() {
-            if (fromCursor.X == null || fromCursor.Y == null) {return;}
+        public static void Underline() {
+            if (Cursor.from.X == null || Cursor.from.Y == null) {return;}
             Selection((Character character, int X, int Y) => {
                 Renderer.Set(character with {underlined=!character.underlined}, 1+Console.WindowHeight.ToString().Length-(Y+1).ToString().Length+1+(Y+1).ToString().Length+X, Y+1);
                 return character with {underlined=!character.underlined};
             });
-            Renderer.Set(text[fromCursor.Y.Value][fromCursor.X.Value], 1+Console.WindowHeight.ToString().Length-(fromCursor.Y.Value+1).ToString().Length+1+(fromCursor.Y.Value+1).ToString().Length+fromCursor.X.Value, fromCursor.Y.Value+1);
-            fromCursor=(null, null);
+            Renderer.Set(text[Cursor.from.Y.Value][Cursor.from.X.Value], 1+Console.WindowHeight.ToString().Length-(Cursor.from.Y.Value+1).ToString().Length+1+(Cursor.from.Y.Value+1).ToString().Length+Cursor.from.X.Value, Cursor.from.Y.Value+1);
+            Cursor.from=(null, null);
         }
-        public void Type(ConsoleKeyInfo key) {
+        public static void Type(ConsoleKeyInfo key) {
             if (key.Key == ConsoleKey.Escape) {
-                if (fromCursor.X == null || fromCursor.Y == null) {return;}
-                Renderer.Set(text[fromCursor.Y.Value][fromCursor.X.Value], 1+Console.WindowHeight.ToString().Length-(fromCursor.Y.Value+1).ToString().Length+1+(fromCursor.Y.Value+1).ToString().Length+fromCursor.X.Value, fromCursor.Y.Value+1);
-                fromCursor = (null, null);
+                if (Cursor.from.X == null || Cursor.from.Y == null) {return;}
+                Renderer.Set(text[Cursor.from.Y.Value][Cursor.from.X.Value], 1+Console.WindowHeight.ToString().Length-(Cursor.from.Y.Value+1).ToString().Length+1+(Cursor.from.Y.Value+1).ToString().Length+Cursor.from.X.Value, Cursor.from.Y.Value+1);
+                Cursor.from = (null, null);
                 return;
             } else if (key.Key == ConsoleKey.Enter) {
-                List<Character> newLine = text[cursor.Y].Skip(cursor.X).Take(text[cursor.Y].Count - cursor.X).ToList();
-                text[cursor.Y].RemoveRange(cursor.X, text[cursor.Y].Count-cursor.X);
-                text.Insert(cursor.Y+1, newLine);
-                CursorDown();
+                List<Character> newLine = text[Cursor.Y].Skip(Cursor.X).Take(text[Cursor.Y].Count - Cursor.X).ToList();
+                text[Cursor.Y].RemoveRange(Cursor.X, text[Cursor.Y].Count-Cursor.X);
+                text.Insert(Cursor.Y+1, newLine);
+                Cursor.Down();
                 Draw();
                 return;
             } else if (key.Key == ConsoleKey.Backspace) {
-                if (cursor.X == 0) {
-                    if (cursor.Y == 0) {return;}
-                    int nextY = text[cursor.Y-1].Count;
-                    text[cursor.Y-1].AddRange(text[cursor.Y]);
-                    text.RemoveAt(cursor.Y);
-                    cursor.X = nextY;
-                    cursor.Y--;
+                if (Cursor.X == 0) {
+                    if (Cursor.Y == 0) {return;}
+                    int nextY = text[Cursor.Y-1].Count;
+                    text[Cursor.Y-1].AddRange(text[Cursor.Y]);
+                    text.RemoveAt(Cursor.Y);
+                    Cursor.X = nextY;
+                    Cursor.Y--;
                     Draw();
                 } else {
-                    text[cursor.Y].RemoveAt(cursor.X-1);
-                    cursor.X--;
-                    UpdateLine(cursor.Y);
+                    text[Cursor.Y].RemoveAt(Cursor.X-1);
+                    Cursor.X--;
+                    UpdateLine(Cursor.Y);
                 }
             }
             if (!char.IsControl(key.KeyChar)) {
-                text[cursor.Y].Insert(cursor.X-1 < 0 ? 0 : cursor.X, new Character{character=key.Modifiers==ConsoleModifiers.Shift ? char.ToUpper(key.KeyChar) : key.KeyChar});
-                CursorRight();
-                UpdateLine(cursor.Y);
+                text[Cursor.Y].Insert(Cursor.X-1 < 0 ? 0 : Cursor.X, new Character{character=key.Modifiers==ConsoleModifiers.Shift ? char.ToUpper(key.KeyChar) : key.KeyChar});
+                Cursor.Right();
+                UpdateLine(Cursor.Y);
             }
         }
-
-        public void UpdateScroll((int X, int Y) offset) {
-            if (scroll.X+offset.X < 0 || scroll.Y+offset.Y < 0) { return; }
-            scroll.X+=offset.X;
-            scroll.Y+=offset.Y;
-            Draw();
-        }
-        public void UpdateLine(int y) {
-            int spaces = Console.WindowHeight.ToString().Length-(y+1+scroll.Y).ToString().Length+1;
+        public static Character GetCharacter(int x, int y) { return text.Count > y ? text[y].Count > x ? text[y][x] : new Character{character=' '} : new Character{character=' '}; }
+        public static int getOffsetX(int y) { return 1+Console.WindowHeight.ToString().Length-(y+1+Scroll.Y).ToString().Length+1+(y+1).ToString().Length; }
+        public static void UpdateLine(int y) {
+            (int X, int Y) screenPos;
+            int spaces = Console.WindowHeight.ToString().Length-(y+1+Scroll.Y).ToString().Length+1;
             int offsetX = 1+spaces+(y+1).ToString().Length;
             for (int j = 0; j < offsetX; j++) {
-                Renderer.Set(new Character{character=((y+1+scroll.Y).ToString()+new string(' ', spaces)+(text.Count >= y+scroll.Y+1 ? "\u2503" : "\u2507"))[j], fg=Color.Gray, bg=new Color(1, 16, 41)}, j, y+1-scroll.Y);
+                Renderer.Set(new Character{character=((y+1+Scroll.Y).ToString()+new string(' ', spaces)+(text.Count >= y+Scroll.Y+1 ? "\u2503" : "\u2507"))[j], fg=Color.Gray, bg=new Color(1, 16, 41)}, j, y+1);
             }
             for (int x = 0; x < Console.WindowWidth-offsetX; x++) {
-                if (x-scroll.X < offsetX || y-scroll.Y < 1) { return; }
-                // To check: Return when: x-scroll.x < 0 || y-scroll.y < 0
-                // To get:      x=x+scroll.x y=y+scroll.y
-                // To set:      x=x+offsetX-scroll.x y=y+1-scroll.y
-                Character character = text.Count > y+scroll.Y ? text[y+scroll.Y].Count > x+scroll.X ? text[y+scroll.Y][x+scroll.X] : new Character{character=' '} : new Character{character=' '};
-                Renderer.Set(character, x+offsetX-scroll.X, y+1-scroll.Y);
+                // To get: x=x+Scroll.x y=y+Scroll.y
+                // To set: x=x+offsetX-Scroll.x y=y+1-Scroll.y
+                screenPos = Scroll.GetScreenPos((x, y));
+                Renderer.Set(GetCharacter(x, y), screenPos.X, screenPos.Y);
             }
-            if (cursor.Y==y+scroll.Y) {
-                int cursorOffset = 1+Console.WindowHeight.ToString().Length-(cursor.Y+1).ToString().Length+1+(cursor.Y+1).ToString().Length;
-                if (cursor.Y > text.Count-1) {
-                    Renderer.Set(new Character{character=' ', bg=Color.Gray}, cursorOffset+cursor.X-scroll.X, cursor.Y+1-scroll.Y);
-                } else if (cursor.X > text[cursor.Y].Count-1) {
-                    Renderer.Set(new Character{character=' ', bg=Color.Gray}, cursorOffset+cursor.X-scroll.X, cursor.Y+1-scroll.Y);
-                } else {
-                    Renderer.Set(new Character{character=text[cursor.Y][cursor.X].character, fg=Color.White, bg=Color.Gray}, cursorOffset+cursor.X-scroll.X, cursor.Y+1-scroll.Y);
-                }
+            if (Cursor.Y==y+Scroll.Y&&!(Cursor.Y+1-Scroll.Y > Console.WindowHeight-1)&&!(offsetX+Cursor.X-Scroll.X > Console.WindowWidth-1)) {
+                screenPos = Scroll.GetScreenPos((Cursor.X, Cursor.Y));
+                Renderer.Set(new Character{character = GetCharacter(Cursor.X+Scroll.X, Cursor.Y+Scroll.Y).character, bg=Color.Gray}, screenPos.X, screenPos.Y);
             }
-            if (fromCursor.Y != null && fromCursor.X != null) {
-                if (fromCursor.Y == y+scroll.Y) {
-                    Renderer.Set(new Character{character=text[fromCursor.Y.Value][fromCursor.X.Value].character, bg=Color.DarkGray, fg=Color.White}, 1+Console.WindowHeight.ToString().Length-(fromCursor.Y.Value+1).ToString().Length+1+(fromCursor.Y.Value+1).ToString().Length+fromCursor.X.Value-scroll.X, fromCursor.Y.Value+1-scroll.Y);
+            if (Cursor.from.Y != null && Cursor.from.X != null) {
+                if (Cursor.from.Y == y+Scroll.Y) {
+                    screenPos = Scroll.GetScreenPos((Cursor.from.X.Value, Cursor.from.Y.Value));
+                    Renderer.Set(new Character{character=GetCharacter(Cursor.from.X.Value, Cursor.from.Y.Value).character, bg=Color.DarkGray, fg=Color.White}, screenPos.X, screenPos.Y);
                 }
             }
         }
-        public void UpdateCursor((short X, short Y) offset) {
-            if (cursor.Y+offset.Y >= text.Count||cursor.Y+offset.Y < 0) { return; }
-            if (cursor.X+offset.X > text[cursor.Y].Count||cursor.X+offset.X < 0) { return; }
-            
-            if (fromCursor.Y != null && fromCursor.X != null) {
-                if (cursor.Y+offset.Y < fromCursor.Y.Value||(cursor.Y+offset.Y == fromCursor.Y.Value&&cursor.X+offset.X < fromCursor.X.Value)) {
-                    Renderer.Set(text[fromCursor.Y.Value][fromCursor.X.Value], 1+Console.WindowHeight.ToString().Length-(fromCursor.Y.Value+1).ToString().Length+1+(fromCursor.Y.Value+1).ToString().Length+fromCursor.X.Value-scroll.X, fromCursor.Y.Value+1-scroll.Y);
-                    fromCursor = (null, null);
-                }
-            }
-
-            int cursorOffset = 1+Console.WindowHeight.ToString().Length-(cursor.Y+1).ToString().Length+1+(cursor.Y+1).ToString().Length;
-            if (cursor==fromCursor) {
-                if (fromCursor.Y != null && fromCursor.X != null) {
-                    Renderer.Set(new Character{character=text[fromCursor.Y.Value][fromCursor.X.Value].character, bg=Color.DarkGray, fg=Color.White}, cursor.X+cursorOffset-scroll.X, cursor.Y+1-scroll.Y);
-                }
-            } else if (cursor.Y > text.Count-1) {
-                Renderer.Set(new Character{character=' ', fg=Color.White}, cursor.X+cursorOffset-scroll.X, cursor.Y+1-scroll.Y);
-            } else if (cursor.X > text[cursor.Y].Count-1) {
-                Renderer.Set(new Character{character=' ', fg=Color.White}, cursor.X+cursorOffset-scroll.X, cursor.Y+1-scroll.Y);
-            } else {
-                Renderer.Set(text[cursor.Y][cursor.X], cursorOffset+cursor.X-scroll.X-scroll.X, cursor.Y+1-scroll.Y);
-            }
-            if (cursor.X+offset.X >= text[cursor.Y+offset.Y].Count) {
-                cursor.X=text[cursor.Y+offset.Y].Count;
-            } else {
-                cursor.X += offset.X;
-            }
-            cursor.Y += offset.Y;
-            cursorOffset = 1+Console.WindowHeight.ToString().Length-(cursor.Y+1).ToString().Length+1+(cursor.Y+1).ToString().Length;
-            if (cursor.Y > text.Count-1) {
-                Renderer.Set(new Character{character=' ', bg=Color.Gray}, cursorOffset+cursor.X-scroll.X, cursor.Y+1-scroll.Y);
-            } else if (cursor.X > text[cursor.Y].Count-1) {
-                Renderer.Set(new Character{character=' ', bg=Color.Gray}, cursorOffset+cursor.X-scroll.X, cursor.Y+1-scroll.Y);
-            } else {
-                Renderer.Set(new Character{character=text[cursor.Y][cursor.X].character, fg=Color.White, bg=Color.Gray}, cursorOffset+cursor.X-scroll.X, cursor.Y+1-scroll.Y);
-            }
-        }
-        public void CursorLeft() {
-            UpdateCursor((-1, 0));
-        }
-        public void CursorRight() {
-            UpdateCursor((1, 0));
-        }
-        public void CursorUp() {
-            UpdateCursor((0, -1));
-        }
-        public void CursorDown() {
-            UpdateCursor((0, 1));
-        }
-        public void Setup() {
+        
+        public static void Setup() {
             Console.SetCursorPosition(0, 0);
             Console.Clear();
             if (file==null) { throw new Exception("No file loaded"); }
@@ -275,21 +212,12 @@ namespace Glyph
             Console.Write(Styles.Reset);
 
         }
-        public void Draw() {
+        public static void Draw() {
             for (int i = 0; i < Console.WindowHeight-1; i++) {
                 UpdateLine(i);
             }
         }
-        public void From() {
-            if (cursor.Y > text.Count-1 || cursor.Y < 0) {return;}
-            if (cursor.X > text[cursor.Y].Count-1 || cursor.X < 0) {return;}
-            if (fromCursor.Y != null && fromCursor.X != null) {
-                Renderer.Set(text[fromCursor.Y.Value][fromCursor.X.Value], 1+Console.WindowHeight.ToString().Length-(fromCursor.Y.Value+1).ToString().Length+1+(fromCursor.Y.Value+1).ToString().Length+fromCursor.X.Value, fromCursor.Y.Value+1);
-            }
-            fromCursor = cursor;
-            Renderer.Set(new Character{character=text[fromCursor.Y.Value][fromCursor.X.Value].character, bg=Color.DarkGray, fg=Color.White}, 1+Console.WindowHeight.ToString().Length-(fromCursor.Y.Value+1).ToString().Length+1+(fromCursor.Y.Value+1).ToString().Length+fromCursor.X.Value, fromCursor.Y.Value+1);
-        }
-        public bool Exit() {
+        public static bool Exit() {
             Console.CursorVisible = true;
             Console.SetCursorPosition(0, 0);
             Console.ResetColor();

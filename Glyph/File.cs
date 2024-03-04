@@ -32,12 +32,12 @@ namespace Glyph
                     if (currentChar == '+') {
                         char[] buffer = new char[6];
                         stream.Read(buffer, 0, 6);
-                        state.fg = ParseColor(new string(buffer));
+                        state.fg = Color.Parse(new string(buffer));
                         continue;
                     } else if (currentChar == '-') {
                         char[] buffer = new char[6];
                         stream.Read(buffer, 0, 6);
-                        state.bg = ParseColor(new string(buffer));
+                        state.bg = Color.Parse(new string(buffer));
                         continue;
                     } else if (currentChar == '{') {
                         state.bold = true;
@@ -105,9 +105,6 @@ namespace Glyph
                 }
                 stream.Write('\n');
             }
-        }
-        public static Color ParseColor(string color) {
-            return new Color(byte.Parse(color[..2], NumberStyles.HexNumber), byte.Parse(color.Substring(2, 2), NumberStyles.HexNumber), byte.Parse(color.Substring(4, 2), NumberStyles.HexNumber));
         }
     }
 }

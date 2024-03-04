@@ -2,7 +2,6 @@
 {
     public static class Program
     {
-        public static Glyph? currentGlyph;
         public static bool closed = false;
         public static void Main(string[] args) {
             if (args.Length != 1) {
@@ -13,14 +12,14 @@
                 Console.WriteLine($"File not found: {args[0]}");
                 return;
             }
-            currentGlyph = new(args[0]);
+            Glyph.Load(args[0]);
 
             Console.CancelKeyPress += (sender, e) => {
                 e.Cancel = true;
             };
 
             Console.CursorVisible = false;
-            currentGlyph.Setup();
+            Glyph.Setup();
             while (!closed)
             {
                 ConsoleKeyInfo key = Console.ReadKey(true);
@@ -28,54 +27,54 @@
                     OnCommand(key);
                 }
             }
-            currentGlyph.Exit();
+            Glyph.Exit();
         }
         public static void OnCommand(ConsoleKeyInfo key) {
             if (key.Modifiers == ConsoleModifiers.Control) {
                 if (key.Key == ConsoleKey.X) {
-                    closed = currentGlyph!.Exit();
+                    closed = Glyph.Exit();
                     return;
                 }
-                if (currentGlyph!.colorPaletteState!=0) {return;}
+                if (Glyph.colorPaletteState!=0) {return;}
                 if (key.Key == ConsoleKey.Z) {
-                    currentGlyph!.Save();
+                    Glyph.Save();
                 } else if (key.Key == ConsoleKey.E) {
-                    currentGlyph!.ShowColorPalette();
+                    Glyph.ShowColorPalette();
                 } else if (key.Key == ConsoleKey.W) {
-                    currentGlyph!.ShowMarkerPalette();
+                    Glyph.ShowMarkerPalette();
                 } else if (key.Key == ConsoleKey.F) {
-                    currentGlyph!.From();
+                    Cursor.From();
                 } else if (key.Key == ConsoleKey.B) {
-                    currentGlyph!.Bold();
+                    Glyph.Bold();
                 } else if (key.Key == ConsoleKey.I) {
-                    currentGlyph!.Itallic();
+                    Glyph.Itallic();
                 } else if (key.Key == ConsoleKey.U) {
-                    currentGlyph!.Underline();
+                    Glyph.Underline();
                 }
             }
             else if (key.Modifiers == 0 || key.Modifiers == ConsoleModifiers.Shift) {
-                if (currentGlyph!.colorPaletteState!=0) {
-                    currentGlyph.ChooseColor(key.KeyChar);
+                if (Glyph.colorPaletteState!=0) {
+                    Glyph.ChooseColor(key.KeyChar);
                 } else if (key.Modifiers == ConsoleModifiers.Shift) {
                     if (key.Key == ConsoleKey.UpArrow) {
-                        currentGlyph.UpdateScroll((0, 1));
+                        Scroll.Update((0, -1));
                     } else if (key.Key == ConsoleKey.DownArrow) {
-                        currentGlyph.UpdateScroll((0, -1));
+                        Scroll.Update((0, 1));
                     } else if (key.Key == ConsoleKey.LeftArrow) {
-                        currentGlyph.UpdateScroll((-1, 0));
+                        Scroll.Update((-1, 0));
                     } else if (key.Key == ConsoleKey.RightArrow) {
-                        currentGlyph.UpdateScroll((1, 0));
+                        Scroll.Update((1, 0));
                     }
                 } else if (key.Key == ConsoleKey.UpArrow) {
-                    currentGlyph.CursorUp();
+                    Cursor.Up();
                 } else if (key.Key == ConsoleKey.DownArrow) {
-                    currentGlyph.CursorDown();
+                     Cursor.Down();
                 } else if (key.Key == ConsoleKey.LeftArrow) {
-                    currentGlyph.CursorLeft();
+                     Cursor.Left();
                 } else if (key.Key == ConsoleKey.RightArrow) {
-                    currentGlyph.CursorRight();
+                     Cursor.Right();
                 } else {
-                    currentGlyph.Type(key);
+                    Glyph.Type(key);
                 }
                 
             }

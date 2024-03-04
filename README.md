@@ -10,9 +10,8 @@ CTRL + B: Bold \
 CTRL + I: Italic \
 CTRL + U: Underline \
 ESC: Deselect From \
+Shift + Arrow: Scrolling \
 Arrow: Cursor 
 
 ## TODO
 - Add scrolling
-- Add color picker
-- 

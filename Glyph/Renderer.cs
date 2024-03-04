@@ -1,5 +1,6 @@
 namespace Glyph
 {
+    using System.Globalization;
     using Style = string[];
     public struct Character {
         public required char character;
@@ -22,18 +23,15 @@ namespace Glyph
     }
     public struct Color(byte r, byte g, byte b)
     {
+        public static Color Parse(string hex) {
+            return new Color(byte.Parse(hex[..2], NumberStyles.HexNumber), byte.Parse(hex.Substring(2, 2), NumberStyles.HexNumber), byte.Parse(hex.Substring(4, 2), NumberStyles.HexNumber));
+        }
         public static bool operator ==(Color c1, Color c2) {
             return c1.r==c2.r && c1.g==c2.g && c1.b == c2.b;
         }
         public static bool operator !=(Color c1, Color c2) {
             return !(c1==c2);
         }
-
-        public static implicit operator Color(int v)
-        {
-            throw new NotImplementedException();
-        }
-
         public readonly string GetForegroundANSI() {
             return "\x1b[38;2;" + r + ";" + g + ";" + b + "m";
         }
@@ -84,10 +82,12 @@ namespace Glyph
     }
     public static class Renderer {
         public static void Set(Character character, int X, int Y) {
+            if (X == -1&&Y == -1) {return;}
             Console.SetCursorPosition(X, Y);
             Console.Write(character.ToString());
         }
         public static void Set(Character[] characters, int X, int Y) {
+            if (X == -1&&Y == -1) {return;}
             foreach (Character character in characters) {
                 Set(character, X, Y);
                 X++;
