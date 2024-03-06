@@ -67,6 +67,8 @@ namespace Glyph
                         Scroll.Update((-1, 0));
                     } else if (key.Key == ConsoleKey.RightArrow) {
                         Scroll.Update((1, 0));
+                    } else {
+                        Glyph.Type(key);
                     }
                 } else if (key.Key == ConsoleKey.UpArrow) {
                     Cursor.Up();
