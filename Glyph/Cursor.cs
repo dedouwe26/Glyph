@@ -18,7 +18,7 @@ namespace Glyph
         }
         public static void UpdateCursor((short X, short Y) offset) {
             (int X, int Y) screenPos;
-            int cursorOffset = Glyph.getOffsetX(Y+offset.Y);
+            int cursorOffset = Glyph.GetOffsetX(Y+offset.Y);
             if (Y+offset.Y >= Glyph.text.Count||Y+offset.Y < 0||Y+1+offset.Y-Scroll.Y > Console.WindowHeight-1) { return; }
             if (X+offset.X > Glyph.text[Y].Count||X+offset.X < 0||cursorOffset+offset.X+X-Scroll.X > Console.WindowWidth-1) { return; }
             

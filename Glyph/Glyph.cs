@@ -167,11 +167,12 @@ namespace Glyph
             }
         }
         public static Character GetCharacter(int x, int y) { return text.Count > y ? text[y].Count > x ? text[y][x] : new Character{character=' '} : new Character{character=' '}; }
-        public static int getOffsetX(int y) { return 1+Console.WindowHeight.ToString().Length-(y+1+Scroll.Y).ToString().Length+1+(y+1).ToString().Length; }
+        public static int GetSpaces(int y) { return 1+Console.WindowHeight.ToString().Length-(y+1+Scroll.Y).ToString().Length+1; }
+        public static int GetOffsetX(int y) { return 1+GetSpaces(y)+(y+Scroll.Y+1).ToString().Length; }
         public static void UpdateLine(int y) {
             (int X, int Y) screenPos;
-            int spaces = Console.WindowHeight.ToString().Length-(y+1+Scroll.Y).ToString().Length+1;
-            int offsetX = 1+spaces+(y+1).ToString().Length;
+            int spaces = GetSpaces(y);
+            int offsetX = 1+spaces+(y+Scroll.Y+1).ToString().Length;
             for (int j = 0; j < offsetX; j++) {
                 Renderer.Set(new Character{character=((y+1+Scroll.Y).ToString()+new string(' ', spaces)+(text.Count >= y+Scroll.Y+1 ? "\u2503" : "\u2507"))[j], fg=Color.Gray, bg=new Color(1, 16, 41)}, j, y+1);
             }

@@ -11,7 +11,7 @@ namespace Glyph
         }
         public static (int X, int Y) GetScreenPos((int X, int Y) textPos) {
             if (textPos.X-X < 0||textPos.Y-Y < 0) {return (-1, -1);}
-            return (textPos.X-X+Glyph.getOffsetX(textPos.Y), textPos.Y+1-Y);
+            return (textPos.X+Glyph.GetOffsetX(textPos.Y), textPos.Y+1-Y);
         }
     }
 }
