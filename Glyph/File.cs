@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography.X509Certificates;
+using OxDEDTerm;
 
 namespace Glyph
 {
@@ -17,8 +18,8 @@ namespace Glyph
 
         private static readonly char[] specialChars = ['{', '}', '(', ')', '[', ']', '+', '-', '\\'];
 
-        public List<List<Character>> Parse() {
-            List<List<Character>> result = [[]];
+        public List<List<StyledString>> Parse() {
+            List<List<StyledString>> result = [[]];
             using StreamReader stream = new(Path);
             (Color bg, Color fg, bool bold, bool itallic, bool underlined) state = (Color.Black, Color.White, false, false, false);
             char previousChar = '\0';
@@ -32,12 +33,12 @@ namespace Glyph
                     if (currentChar == '+') {
                         char[] buffer = new char[6];
                         stream.Read(buffer, 0, 6);
-                        state.fg = Color.Parse(new string(buffer));
+                        state.fg = new Color(new string(buffer));
                         continue;
                     } else if (currentChar == '-') {
                         char[] buffer = new char[6];
                         stream.Read(buffer, 0, 6);
-                        state.bg = Color.Parse(new string(buffer));
+                        state.bg = new Color(new string(buffer));
                         continue;
                     } else if (currentChar == '{') {
                         state.bold = true;
@@ -77,31 +78,31 @@ namespace Glyph
             }
             return result;
         }
-        public void Write(List<List<Character>> characters) {
+        public void Write(List<List<StyledString>> characters) {
             using StreamWriter stream = new(Path);
             (Color bg, Color fg, bool bold, bool itallic, bool underlined) state = (Color.Black, Color.White, false, false, false);
-            foreach (List<Character> line in characters) {
-                foreach (Character character in line) {
+            foreach (List<StyledString> line in characters) {
+                foreach (StyledString character in line) {
                     if (character.fg != state.fg) {
                         stream.Write("+"+character.fg.ToString());
                         state.fg = character.fg;
                     } if (character.bg != state.bg) {
                         stream.Write("-"+character.bg.ToString());
-                        state.bg = character.bg;
+                        state.bg = character.style.bg;
                     } if (character.bold != state.bold) {
-                        stream.Write(character.bold ? '{' : '}');
+                        stream.Write(character.style.Bold ? '{' : '}');
                         state.bold = character.bold;
                     } if (character.itallic != state.itallic) {
-                        stream.Write(character.itallic ? '(' : ')');
-                        state.itallic = character.itallic;
-                    } if (character.underlined != state.underlined) {
-                        stream.Write(character.underlined ? '[' : ']');
-                        state.underlined = character.underlined;
+                        stream.Write(character.style.itallic ? '(' : ')');
+                        state.itallic = character.style.itallic;
+                    } if (character.style.underlined != state.underlined) {
+                        stream.Write(character.style.underlined ? '[' : ']');
+                        state.underlined = character.style.underlined;
                     }
                     if (specialChars.Contains(character.character)) {
                         stream.Write('\\');
                     }
-                    stream.Write(character.character);
+                    stream.Write(character.text);
                 }
                 stream.Write('\n');
             }

@@ -1,4 +1,5 @@
 using System.Globalization;
+using OxDEDTerm;
 
 namespace Glyph
 {
@@ -167,14 +168,13 @@ namespace Glyph
             }
         }
         public static Character GetCharacter(int x, int y) { return text.Count > y ? text[y].Count > x ? text[y][x] : new Character{character=' '} : new Character{character=' '}; }
-        public static int GetSpaces(int y) { return 1+Console.WindowHeight.ToString().Length-(y+1+Scroll.Y).ToString().Length+1; }
         public static int GetOffsetX(int y) { return 1+GetSpaces(y)+(y+Scroll.Y+1).ToString().Length; }
         public static void UpdateLine(int y) {
             (int X, int Y) screenPos;
             int spaces = GetSpaces(y);
             int offsetX = 1+spaces+(y+Scroll.Y+1).ToString().Length;
             for (int j = 0; j < offsetX; j++) {
-                Renderer.Set(new Character{character=((y+1+Scroll.Y).ToString()+new string(' ', spaces)+(text.Count >= y+Scroll.Y+1 ? "\u2503" : "\u2507"))[j], fg=Color.Gray, bg=new Color(1, 16, 41)}, j, y+1);
+                Renderer.Set(new Character{character=((y+1+Scroll.Y).ToString()+new string(' ', spaces)+(text.Count >= y+Scroll.Y+1 ? "" : ""))[j], fg=Color.Gray, bg=new Color(1, 16, 41)}, j, y+1);
             }
             for (int x = 0; x < Console.WindowWidth-offsetX; x++) {
                 // To get: x=x+Scroll.x y=y+Scroll.y
@@ -198,16 +198,7 @@ namespace Glyph
             Console.SetCursorPosition(0, 0);
             Console.Clear();
             if (file==null) { throw new Exception("No file loaded"); }
-            for (int i = 0; i < Console.WindowWidth; i++) {
-                if (i < 5) {
-                    Renderer.Set(new Character{character="Glyph"[i], bg=new Color(1, 16, 41), fg=Color.Orange, bold=true}, i, 0);
-                }
-                else if (i>=Console.WindowWidth/2+1-file.Name.Length/2 && i < file.Name.Length+(Console.WindowWidth/2+1-file.Name.Length/2)) {
-                    Renderer.Set(new Character{character=file.Name[i-(Console.WindowWidth/2+1-file.Name.Length/2)], bg=new Color(1, 16, 41)}, i, 0);
-                } else {
-                    Renderer.Set(new Character{character=' ', bg=new Color(1, 16, 41)}, i, 0);
-                }
-            }
+            
             Draw();
             Console.SetCursorPosition(Console.WindowWidth-1, Console.WindowHeight-1);
             Console.Write(Styles.Reset);
