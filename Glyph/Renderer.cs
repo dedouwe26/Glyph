@@ -21,6 +21,9 @@ namespace Glyph
             Terminal.Clear();
             Terminal.Set("Glyph", (0, 0), new Style{Bold = true, foregroundColor = Color.Orange});
             Terminal.Set(file.Name, (Console.WindowWidth/2+1-file.Name.Length/2, 0), new Style{Bold = true, foregroundColor = Color.White});
+            for (int line = FrameOffsetY; line < FrameSize.height; line++) {
+                DrawLineNumber(line, false);
+            }
         }
         /// <param name="y">screen coord y</param>
         public static string GetLineNumber(int y) {
@@ -33,19 +36,31 @@ namespace Glyph
         public static void DrawLineNumber(int line, bool isFilled) {
             Terminal.Set(GetLineNumber(line)+new string(' ', GetSpaces(line))+(isFilled ? '\u2503' : '\u2507'), (0, line+FrameOffsetY));
         }
-        public static void Draw(List<List<StyledString>> newData, List<List<StyledString>> oldData) {
+        public static void Draw(List<List<StyledString>> newData) {
             for (int line = FrameOffsetY; line < FrameSize.height; line++) {
-                if (newData[line].Count < 1) {
+                if (newData.Count > line) {
+                    if (newData[line].Count < 1) {
+                        DrawLineNumber(line, false);
+                    } else if (newData[line][0].text.Length < 1) {
+                        DrawLineNumber(line, false);
+                    } else {
+                        DrawLineNumber(line, true);
+                    }
+                    DrawLine(line, newData[line]);
+                } else {
                     DrawLineNumber(line, false);
-                } else if (newData[line][0].text.Length < 1) {
-                     
                 }
-                
-                DrawLine(line, dataDiff[line]);
             }
         }
-        public static void DrawLine(int line, List<StyledString> dataDiff) {
-
+        public static void DrawLine(int line, List<StyledString> lineData) {
+            int offset = 0;
+            foreach (StyledString str in lineData) {
+                Terminal.Set(str.text, (FrameOffsetX+offset, FrameOffsetY+line), str.style);
+                offset+=str.text.Length;
+            }
+            if (Cursor.Y == line+Scroll.Y) {
+                
+            }
         }
     }
 }
