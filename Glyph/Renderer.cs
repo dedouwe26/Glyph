@@ -17,10 +17,10 @@ namespace Glyph
         /// excluding row numbers.
         /// </summary>
         public static (uint width, uint height) FrameSize {get {return ((uint)(Terminal.Width-FrameOffsetX), (uint)(Terminal.Height-FrameOffsetY));}}
-        public static void Init(File file) {
+        public static void Init(string fileName) {
             Terminal.Clear();
             Terminal.Set("Glyph", (0, 0), new Style{Bold = true, foregroundColor = Color.Orange});
-            Terminal.Set(file.Name, (Console.WindowWidth/2+1-file.Name.Length/2, 0), new Style{Bold = true, foregroundColor = Color.White});
+            Terminal.Set(fileName, (Console.WindowWidth/2+1-fileName.Length/2, 0), new Style{Bold = true, foregroundColor = Color.White});
             for (int line = FrameOffsetY; line < FrameSize.height; line++) {
                 DrawLineNumber(line, false);
             }
