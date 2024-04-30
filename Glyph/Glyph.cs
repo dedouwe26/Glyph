@@ -1,110 +1,84 @@
 using System.Globalization;
-using OxDEDTerm;
+using OxDED.Terminal;
 
 namespace Glyph
 {
-    public delegate Character CharacterChanger (Character character, int X, int Y);
     public static class Glyph
     {
         public static byte colorPaletteState = 0;
         public static string? colorPaletteCode = null;
         public static File? file;
         private static Timer? timer;
-        public static List<List<Character>> text = new();
+        public static List<List<StyledString>> text = new();
         public static void Load(string path) {
             file = new(path);
             text = file.Parse();
         }
         public static void Save() {
             file!.Write(text);
-            for (int i = 0; i < "Saved".Length; i++) {
-                Renderer.Set(new Character{character="Saved"[i], fg= Color.Orange, bg=new Color(1, 16, 41)}, i, 0);
-            }
+                Terminal.Set("Saved", (0, 0), new Style{foregroundColor = Color.Orange, backgroundColor=new Color(1, 16, 41), Bold=true});
             timer = new((_) => {
                 timer!.Dispose();
-                for (int i = 0; i < "Glyph".Length; i++) {
-                    Renderer.Set(new Character{character="Glyph"[i], bold=true, fg= Color.Orange, bg=new Color(1, 16, 41)}, i, 0);
-                }
+                Terminal.Set("Glyph", (0, 0), new Style{foregroundColor = Color.Orange, backgroundColor=new Color(1, 16, 41), Bold=true});
             }, null, TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(-1));
         }
         public static void ShowColorPalette() {
             if (Cursor.from==(null, null)) { return; }
             colorPaletteState = 1;
-            for (int i = 0; i < Color.fgColors.Length; i++) {
-                char symbol = (char)(i+'a');
-                Renderer.Set([new Character{character=' ',bg=Color.fgColors[i]}, new Character{character=symbol,bg=Color.fgColors[i]}, new Character{character=' ',bg=Color.fgColors[i]}], i*3, 1);
-            }
-            Renderer.Set(new Character{character='.',bg=Color.DarkGray}, 0, 2);
+            Renderer.DrawPalette(Renderer.fgColors);
         }
         public static void ShowMarkerPalette() {
             if (Cursor.from==(null, null)) { return; }
             colorPaletteState = 2;
-            for (int i = 0; i < Color.bgColors.Length; i++) {
-                char symbol = (char)(i+'a');
-                Renderer.Set([new Character{character=' ',bg=Color.bgColors[i]}, new Character{character=symbol,bg=Color.bgColors[i]}, new Character{character=' ',bg=Color.bgColors[i]}], i*3, 1); 
-            }
-            Renderer.Set(new Character{character='.',bg=Color.DarkGray}, 0, 2);
-        }
-        public static void ShowHexCodePalette() {
-            if (colorPaletteCode==null) {return;}
-            Renderer.Set([
-                new Character{character=colorPaletteCode.Length >= 1 ? colorPaletteCode[0] : ' ',bg=Color.DarkRed}, new Character{character=colorPaletteCode.Length >= 2 ? colorPaletteCode[1] : ' ',bg=Color.DarkRed}, 
-                new Character{character=colorPaletteCode.Length >= 3 ? colorPaletteCode[2] : ' ',bg=Color.DarkGreen}, new Character{character=colorPaletteCode.Length >= 4 ? colorPaletteCode[3] : ' ',bg=Color.DarkGreen}, 
-                new Character{character=colorPaletteCode.Length >= 5 ? colorPaletteCode[4] : ' ',bg=Color.DarkBlue}, new Character{character=colorPaletteCode.Length >= 6 ? colorPaletteCode[5] : ' ',bg=Color.DarkBlue}
-            ], 0, 1);
+            Renderer.DrawPalette(Renderer.bgColors);
         }
         public static void ChooseColor(char key) {
             Color color;
             if (key=='.') {
                 colorPaletteCode="";
-                ShowHexCodePalette();
+                Renderer.DrawHexCodePalette(colorPaletteCode, [text.Count < 1 ? [] : text[0], text.Count < 2 ? [] : text[1]]);
                 return;
             } else {
                 if (colorPaletteCode==null) {
-                    color = colorPaletteState==1 ? Color.fgColors[key-'a'] : Color.bgColors[key-'a'];
+                    color = colorPaletteState==1 ? Renderer.fgColors[key-'a'] : Renderer.bgColors[key-'a'];
                 } else {
                     colorPaletteCode += key;
-                    if (colorPaletteCode.Length != 6) { ShowHexCodePalette(); return; }
+                    if (colorPaletteCode.Length != 6) { Renderer.DrawHexCodePalette(colorPaletteCode); return; }
                     try {
                         color = new(byte.Parse(colorPaletteCode[..2], NumberStyles.HexNumber), byte.Parse(colorPaletteCode.Substring(2, 2), NumberStyles.HexNumber), byte.Parse(colorPaletteCode.Substring(4, 2), NumberStyles.HexNumber));
                     }
                     catch (FormatException) {
+                        if (colorPaletteCode == null) {
+                            Renderer.ClearPalette([text.Count < 1 ? [] : text[0], text.Count < 2 ? [] : text[1]]);
+                        } else {
+                            Renderer.ClearHexCodePalette(text.Count < 1 ? [] : text[0]);
+                        }
                         Cursor.from = (null, null);
                         colorPaletteState = 0;
                         colorPaletteCode = null;
-                        Draw();
                         return;
                     }
                     
                     colorPaletteCode = null;
                 }
             }
-            Selection((Character character, int X, int Y) => {
-                if (colorPaletteState == 1) {
-                    return character with {fg = color};
-                } else {
-                    return character with {bg = color};
-                }
-            });
+            if (colorPaletteState == 1) {
+                Selection((Style oldStyle, int X, int Y) => {
+                    return oldStyle with {foregroundColor = color};
+                });
+            } else {
+                Selection((Style oldStyle, int X, int Y) => {
+                    return oldStyle with {backgroundColor = color};
+                });
+            }
+            if (colorPaletteCode == null) {
+                Renderer.ClearPalette([text.Count < 1 ? [] : text[0], text.Count < 2 ? [] : text[1]]);
+            } else {
+                Renderer.ClearHexCodePalette(text.Count < 1 ? [] : text[0]);
+            }
             Cursor.from = (null, null);
             colorPaletteState = 0;
             colorPaletteCode = null;
-            Draw();
-            
-        }
-        public static void Selection(CharacterChanger changer) {
-            if (Cursor.from.X == null || Cursor.from.Y == null) {return;}
-            int x=Cursor.from.X.Value;
-            int y=Cursor.from.Y.Value;
-            while (x!=Cursor.X || y!=Cursor.Y) {
-                text[y][x] = changer.Invoke(text[y][x], x, y);
-                if (x == text[y].Count-1 && y!=Cursor.Y) {
-                    x = 0;
-                    y++;
-                } else {
-                    x++;
-                }
-            }
         }
         public static void Bold() {
             if (Cursor.from.X == null || Cursor.from.Y == null) {return;}
@@ -198,7 +172,6 @@ namespace Glyph
             Console.SetCursorPosition(0, 0);
             Console.Clear();
             if (file==null) { throw new Exception("No file loaded"); }
-            
             Draw();
             Console.SetCursorPosition(Console.WindowWidth-1, Console.WindowHeight-1);
             Console.Write(Styles.Reset);

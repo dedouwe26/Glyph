@@ -1,5 +1,9 @@
+using System.Data.Common;
+using OxDED.Terminal;
+
 namespace Glyph
 {
+    public delegate Style StyleChanger (Style oldStyle, int X, int Y);
     public static class Cursor {
         public static int X = 0;
         public static int Y = 0;
@@ -60,6 +64,34 @@ namespace Glyph
         }
         public static void Down() {
             UpdateCursor((0, 1));
+        }
+        public static void Selection(StyleChanger changer) {
+            if (from.X == null || from.Y == null) {return;}
+            int x=from.X.Value;
+            int y=from.Y.Value;
+            while ((y > Y) && (x > X)) {
+                for (int lineIndex = 0; lineIndex < Glyph.text.Count; lineIndex++) {
+                    List<StyledString> line = Glyph.text[lineIndex];
+                    int posInLine = 0;
+                    int posForPart = 0;
+                    for (int PartIndex = 0; PartIndex < line.Count; PartIndex++) {
+                        StyledString strPart = line[PartIndex];
+                        if (y == from.Y) {
+                            foreach (char c in strPart.text) {
+                                if (posInLine <= from.X) {
+                                    Glyph.text[lineIndex][PartIndex] = strPart with {text = strPart.text[..posForPart] };
+                                    Glyph.text[]
+                                    changer(strPart.style, y, posInLine);
+                                }
+                                posForPart++;
+                                posInLine++;
+                            }
+                        }
+                        posForPart = 0;
+                        
+                    }
+                }
+            }
         }
     }
 }

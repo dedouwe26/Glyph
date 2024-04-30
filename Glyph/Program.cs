@@ -30,7 +30,7 @@ namespace Glyph
                     OnCommand(key);
                 }
             }
-            Glyph.Exit();
+            closed = Glyph.Exit();
         }
         public static void OnCommand(ConsoleKeyInfo key) {
             if (key.Modifiers == ConsoleModifiers.Control) {
