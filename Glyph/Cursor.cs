@@ -1,9 +1,8 @@
-using System.Data.Common;
 using OxDED.Terminal;
 
 namespace Glyph
 {
-    public delegate Style StyleChanger (Style oldStyle, int X, int Y);
+    public delegate Style StyleChanger (StyledString oldStyle, int X, int Y);
     public static class Cursor {
         public static int X = 0;
         public static int Y = 0;
@@ -65,31 +64,75 @@ namespace Glyph
         public static void Down() {
             UpdateCursor((0, 1));
         }
+
+        public static bool IsOnPartSplit(int x, int y, out int index) {
+            if (x == 0) { index = 0; return true; }
+            List<StyledString> line = Glyph.text[y];
+            int splitLine = 0;
+            for (int i = 0; i < line.Count; i++) {
+                StyledString part = line[i];
+                splitLine += part.text.Length;
+                if (x==splitLine) {
+                    index = i;
+                    return true;
+                } else if (x<splitLine) {
+                    index = i;
+                    return false;
+                }
+            }
+            index = -1;
+            return false;
+        }
+
+        public static int CreateSplit(int part, int x, int y) {
+            List<StyledString> line = Glyph.text[y];
+            StyledString original = line[part];
+
+            int offsetInChars = 0;
+            for (int i = 0; i < part; i++) {
+                offsetInChars+=line[i].text.Length;
+            }
+            offsetInChars = x - offsetInChars;
+
+            StyledString left = new() {
+                text = original.text[..offsetInChars],
+                style = original.style
+            };
+            StyledString right = new() {
+                text = original.text[offsetInChars..],
+                style = original.style
+            };
+
+            Glyph.text[y].RemoveAt(part);
+            Glyph.text[y].InsertRange(part, [left, right]);
+            return part+1;
+        }
+
+        public static void NewLine() {
+            if (!IsOnPartSplit(X, Y, out int start)) {
+                start = CreateSplit(start, X, Y);
+            }
+            List<StyledString> newLine = Glyph.text[Y].Skip(start).Take(Glyph.text[Y].Count - start).ToList();
+            Glyph.text[Y].RemoveRange(start, Glyph.text[Y].Count-start);
+            Glyph.text.Insert(Y+1, newLine);
+            Down();
+        }
         public static void Selection(StyleChanger changer) {
             if (from.X == null || from.Y == null) {return;}
-            int x=from.X.Value;
-            int y=from.Y.Value;
-            while ((y > Y) && (x > X)) {
-                for (int lineIndex = 0; lineIndex < Glyph.text.Count; lineIndex++) {
-                    List<StyledString> line = Glyph.text[lineIndex];
-                    int posInLine = 0;
-                    int posForPart = 0;
-                    for (int PartIndex = 0; PartIndex < line.Count; PartIndex++) {
-                        StyledString strPart = line[PartIndex];
-                        if (y == from.Y) {
-                            foreach (char c in strPart.text) {
-                                if (posInLine <= from.X) {
-                                    Glyph.text[lineIndex][PartIndex] = strPart with {text = strPart.text[..posForPart] };
-                                    Glyph.text[]
-                                    changer(strPart.style, y, posInLine);
-                                }
-                                posForPart++;
-                                posInLine++;
-                            }
-                        }
-                        posForPart = 0;
-                        
-                    }
+
+            if (!IsOnPartSplit(from.X.Value, from.Y.Value, out int startX)) {
+                startX = CreateSplit(startX, from.X.Value, from.X.Value);
+            }
+            if (!IsOnPartSplit(X, Y, out int endX)) {
+                endX = CreateSplit(endX, from.X.Value, from.X.Value);
+            }
+            for (int y = from.Y.Value; y < Y+1; y++) {
+                List<StyledString> line = Glyph.text[y];
+                for (int x = y==from.Y.Value ? startX : 0; x < (y==Y ? endX+1 : line.Count); x++) {
+                    StyledString part = line[x];
+                    Glyph.text[y][x] = part with {
+                        style = changer.Invoke(part, x, y)
+                    };
                 }
             }
         }
