@@ -9,10 +9,11 @@
     <SelfContained>true</SelfContained>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <PublishTrimmed>true</PublishTrimmed>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="0xDED.Terminal" Version="3.1.1" />
+    <PackageReference Include="0xDED.Terminal" Version="3.1.2" />
   </ItemGroup>
 
 </Project>

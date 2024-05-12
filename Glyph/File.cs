@@ -1,14 +1,12 @@
-using System.Globalization;
 using System.Runtime.InteropServices;
-using System.Security.Cryptography.X509Certificates;
-using OxDEDTerm;
+using OxDED.Terminal;
 
 namespace Glyph
 {
-    public class File(string path)
+    internal class File(string path)
     {
-        public string Path = path;
-        public string Name {get {
+        internal string Path = path;
+        internal string Name {get {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
                 return Path.Split('\\').Last();
             } else {
@@ -18,7 +16,7 @@ namespace Glyph
 
         private static readonly char[] specialChars = ['{', '}', '(', ')', '[', ']', '+', '-', '\\'];
 
-        public List<List<StyledString>> Parse() {
+        internal List<List<StyledString>> Parse() {
             List<List<StyledString>> result = [[]];
             using StreamReader stream = new(Path);
             (Color bg, Color fg, bool bold, bool itallic, bool underlined) state = (Color.Black, Color.White, false, false, false);
@@ -64,45 +62,47 @@ namespace Glyph
                 if (currentChar == '\\'&&previousChar != '\\') {
                     continue;
                 }
-                if (currentChar == '\n') { result.Add([]); continue; }
-                result[^1].Add(new Character
-                {
-                    character = currentChar,
-                    bg = state.bg,
-                    fg = state.fg,
-                    bold = state.bold,
-                    itallic = state.itallic,
-                    underlined = state.underlined
-                });
 
+                if (currentChar == '\n') { result.Add([]); continue; }
+
+                Style style = new() { BackgroundColor = state.bg, ForegroundColor = state.fg, Bold = state.bold, Italic = state.itallic, Underline = state.underlined};
+                if (result[^1].Count <= 0) {
+                    result[^1].Add(new StyledString { text = currentChar.ToString(), style = style });
+                } else if (result[^1][^1].style.Equals(style)) {
+                    StyledString last = result[^1][^1];
+                    result[^1][^1] = last with { text = last.text+currentChar };
+                } else {
+                    result[^1].Add(new StyledString { text = currentChar.ToString(), style = style });
+                }
             }
             return result;
         }
-        public void Write(List<List<StyledString>> characters) {
+        internal void Write(List<List<StyledString>> characters) {
             using StreamWriter stream = new(Path);
             (Color bg, Color fg, bool bold, bool itallic, bool underlined) state = (Color.Black, Color.White, false, false, false);
             foreach (List<StyledString> line in characters) {
-                foreach (StyledString character in line) {
-                    if (character.fg != state.fg) {
-                        stream.Write("+"+character.fg.ToString());
-                        state.fg = character.fg;
-                    } if (character.bg != state.bg) {
-                        stream.Write("-"+character.bg.ToString());
-                        state.bg = character.style.bg;
-                    } if (character.bold != state.bold) {
-                        stream.Write(character.style.Bold ? '{' : '}');
-                        state.bold = character.bold;
-                    } if (character.itallic != state.itallic) {
-                        stream.Write(character.style.itallic ? '(' : ')');
-                        state.itallic = character.style.itallic;
-                    } if (character.style.underlined != state.underlined) {
-                        stream.Write(character.style.underlined ? '[' : ']');
-                        state.underlined = character.style.underlined;
+                foreach (StyledString part in line) {
+                    if (part.style.ForegroundColor != state.fg) {
+                        stream.Write("+"+part.style.ForegroundColor.ToString());
+                        state.fg = part.style.ForegroundColor;
+                    } if (part.style.BackgroundColor != state.bg) {
+                        stream.Write("-"+part.style.BackgroundColor.ToString());
+                        state.bg = part.style.BackgroundColor;
+                    } if (part.style.Bold != state.bold) {
+                        stream.Write(part.style.Bold ? '{' : '}');
+                        state.bold = part.style.Bold;
+                    } if (part.style.Italic != state.itallic) {
+                        stream.Write(part.style.Italic ? '(' : ')');
+                        state.itallic = part.style.Italic;
+                    } if (part.style.Underline != state.underlined) {
+                        stream.Write(part.style.Underline ? '[' : ']');
+                        state.underlined = part.style.Underline;
                     }
-                    if (specialChars.Contains(character.character)) {
-                        stream.Write('\\');
+                    string str = part.text;
+                    foreach (char special in specialChars) {
+                        str = str.Replace(special.ToString(), "\\"+special);
                     }
-                    stream.Write(character.text);
+                    stream.Write(str);
                 }
                 stream.Write('\n');
             }

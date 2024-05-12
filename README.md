@@ -1,6 +1,9 @@
 # Glyph
+
 A console text editor with text decoration.
+
 ## Keybinds
+
 CTRL + X: exit \
 CTRL + F: From \
 CTRL + W: Marker \
@@ -11,4 +14,4 @@ CTRL + I: Italic \
 CTRL + U: Underline \
 ESC: Deselect From \
 Shift + Arrow: Scrolling \
-Arrow: Cursor 
+Arrow: Cursor

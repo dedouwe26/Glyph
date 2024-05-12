@@ -2,70 +2,80 @@ using OxDED.Terminal;
 
 namespace Glyph
 {
-    public delegate Style StyleChanger (StyledString oldStyle, int X, int Y);
-    public static class Cursor {
-        public static int X = 0;
-        public static int Y = 0;
-        public static (int? X, int? Y) from = (null, null);
-        public static void From() {
-            (int X, int Y) screenPos;
+    internal delegate Style StyleChanger (StyledString oldStyle, int X, int Y);
+    internal static class Cursor {
+        internal static readonly Color FromCursorColor = Color.DarkGray;
+        internal static readonly Color CursorColor = new(128, 128, 128);
+        internal static int X = 0;
+        internal static int Y = 0;
+        internal static (int? X, int? Y) from = (null, null);
+        internal static void From() {
             if (Y > Glyph.text.Count-1 || Y < 0) {return;}
             if (X > Glyph.text[Y].Count-1 || X < 0) {return;}
             if (from.Y != null && from.X != null) {
-                screenPos = Scroll.GetScreenPos((from.X.Value, from.Y.Value));
-                Renderer.Set(Glyph.GetCharacter(from.X.Value, from.Y.Value), screenPos.X, screenPos.Y);
+                Renderer.DrawChar(from.X.Value, from.Y.Value);
             }
             from = (X, Y);
-            screenPos = Scroll.GetScreenPos((from.X.Value, from.Y.Value));
-            Renderer.Set(new Character{character=Glyph.GetCharacter(from.X.Value, from.Y.Value).character, bg=Color.DarkGray}, screenPos.X, screenPos.Y);
+            Terminal.Set(Renderer.GetCharacter(from.X.Value, from.Y.Value) ?? ' ', Renderer.GetScreenPos((from.X.Value, from.Y.Value)), new Style { BackgroundColor = Cursor.FromCursorColor });
         }
-        public static void UpdateCursor((short X, short Y) offset) {
-            (int X, int Y) screenPos;
-            int cursorOffset = Glyph.GetOffsetX(Y+offset.Y);
-            if (Y+offset.Y >= Glyph.text.Count||Y+offset.Y < 0||Y+1+offset.Y-Scroll.Y > Console.WindowHeight-1) { return; }
-            if (X+offset.X > Glyph.text[Y].Count||X+offset.X < 0||cursorOffset+offset.X+X-Scroll.X > Console.WindowWidth-1) { return; }
+        internal static void UpdateCursor((short X, short Y) offset) {
+            // Check if out of bounds.
+            // Y
+             { if (
+                Y+offset.Y >= Glyph.text.Count || // cannot leave written text area.
+                Y+offset.Y < 0 || // Cannot go higher than highest.
+                Y+Renderer.FrameOffsetY+offset.Y-Scroll.Y > Renderer.FrameSize.height // Cannot leave screen.
+            )return; }
+            // X
+            if (
+                X+offset.X > Renderer.GetLength(Y) || // cannot leave written text area.
+                X+offset.X < 0 || // Cannot go higher than highest.
+                Renderer.FrameOffsetX+X+offset.X-Scroll.X > Console.WindowWidth-1 // Cannot leave screen.
+            ) { return; } 
             
+            // For checking if cursor goes behind the from cursor.
             if (from.Y != null && from.X != null) {
-                if (Y+offset.Y < from.Y.Value||(Y+offset.Y == from.Y.Value&&X+offset.X < from.X.Value)) {
-                    screenPos = Scroll.GetScreenPos((from.X.Value, from.Y.Value));
-                    Renderer.Set(Glyph.GetCharacter(from.X.Value, from.Y.Value), screenPos.X, screenPos.Y);
+                if (Y+offset.Y < from.Y.Value||(Y+offset.Y == from.Y.Value&&X+offset.X < from.X.Value)) { // Check if cursor gets behind from cursor
+                    Renderer.DrawChar(from.X.Value, from.Y.Value);
                     from = (null, null);
                 }
             }
             
-            if (X==from.X&&Y==from.Y) {
-                if (from.Y != null && from.X != null) {
-                    screenPos = Scroll.GetScreenPos((X, Y));
-                    Renderer.Set(new Character{character=Glyph.GetCharacter(from.X.Value, from.Y.Value).character, bg=Color.DarkGray}, screenPos.X, screenPos.Y);
+            // Remove highlight from old place.
+            if (X==from.X&&Y==from.Y) { // Check if the from cursor was there.
+                if (from.Y != null && from.X != null) { // For CodeAnalysis.
+                    Renderer.DrawFromCursor();
                 }
             } else {
-                screenPos = Scroll.GetScreenPos((X, Y));
-                Renderer.Set(Glyph.GetCharacter(X, Y), screenPos.X, screenPos.Y);
+                // Redraw.
+                Renderer.DrawChar(X, Y);
             }
             
-            if (X+offset.X >= Glyph.text[Y+offset.Y].Count) {
-                X=Glyph.text[Y+offset.Y].Count;
+            // Update Cursor position.
+            int length = Renderer.GetLength(Y+offset.Y);
+            if (X+offset.X >= length) {
+                X=length;
             } else {
                 X+=offset.X;
             }
             Y += offset.Y;
-            screenPos = Scroll.GetScreenPos((X, Y));
-            Renderer.Set(new Character{character=Glyph.GetCharacter(X, Y).character, bg=Color.Gray}, screenPos.X, screenPos.Y);
+
+            Renderer.DrawCursor();
         }
-        public static void Left() {
+        internal static void Left() {
             UpdateCursor((-1, 0));
         }
-        public static void Right() {
+        internal static void Right() {
             UpdateCursor((1, 0));
         }
-        public static void Up() {
+        internal static void Up() {
             UpdateCursor((0, -1));
         }
-        public static void Down() {
+        internal static void Down() {
             UpdateCursor((0, 1));
         }
 
-        public static bool IsOnPartSplit(int x, int y, out int index) {
+        internal static bool IsOnPartSplit(int x, int y, out int index) {
             if (x == 0) { index = 0; return true; }
             List<StyledString> line = Glyph.text[y];
             int splitLine = 0;
@@ -84,7 +94,7 @@ namespace Glyph
             return false;
         }
 
-        public static int CreateSplit(int part, int x, int y) {
+        internal static int CreateSplit(int part, int x, int y) {
             List<StyledString> line = Glyph.text[y];
             StyledString original = line[part];
 
@@ -108,16 +118,30 @@ namespace Glyph
             return part+1;
         }
 
-        public static void NewLine() {
+        internal static void NewLine() {
             if (!IsOnPartSplit(X, Y, out int start)) {
                 start = CreateSplit(start, X, Y);
             }
-            List<StyledString> newLine = Glyph.text[Y].Skip(start).Take(Glyph.text[Y].Count - start).ToList();
-            Glyph.text[Y].RemoveRange(start, Glyph.text[Y].Count-start);
-            Glyph.text.Insert(Y+1, newLine);
-            Down();
+            int length = Glyph.text[Y].Count - start; // FIXME: Also enters the last part thing
+            if (length <= 0) {
+                Glyph.text.Insert(Y+1, []);
+                Renderer.DrawChar(X, Y);
+            } else {
+                List<StyledString> newLine = Glyph.text[Y].Skip(start).ToList();
+                Glyph.text[Y].RemoveRange(start, length);
+                Glyph.text.Insert(Y+1, newLine);
+                int offset = X;
+                for (int pi = 0; pi < newLine.Count; pi++) {
+                    for (int ci = 0; ci < newLine[pi].text.Length; ci++) {
+                        Renderer.DrawChar(offset, Y);
+                        offset++;
+                    }
+                }
+            }
+            X = 0;
+            Y++;
         }
-        public static void Selection(StyleChanger changer) {
+        internal static void Selection(StyleChanger changer) {
             if (from.X == null || from.Y == null) {return;}
 
             if (!IsOnPartSplit(from.X.Value, from.Y.Value, out int startX)) {
