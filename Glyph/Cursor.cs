@@ -1,3 +1,4 @@
+using System.Dynamic;
 using OxDED.Terminal;
 
 namespace Glyph
@@ -18,7 +19,7 @@ namespace Glyph
             from = (X, Y);
             Terminal.Set(Renderer.GetCharacter(from.X.Value, from.Y.Value) ?? ' ', Renderer.GetScreenPos((from.X.Value, from.Y.Value)), new Style { BackgroundColor = Cursor.FromCursorColor });
         }
-        internal static void UpdateCursor((short X, short Y) offset) {
+        internal static void UpdateCursor((int X, int Y) offset) {
             // Check if out of bounds.
             // Y
              { if (
@@ -28,9 +29,9 @@ namespace Glyph
             )return; }
             // X
             if (
-                X+offset.X > Renderer.GetLength(Y) || // cannot leave written text area.
+                (offset.Y == 0 && X +offset.X > Renderer.GetLength(Y+offset.Y)) || // cannot leave written text area (for snap reasons: checking for offsetY == 0).
                 X+offset.X < 0 || // Cannot go higher than highest.
-                Renderer.FrameOffsetX+X+offset.X-Scroll.X > Console.WindowWidth-1 // Cannot leave screen.
+                X+offset.X < 0 // Cannot leave screen.
             ) { return; } 
             
             // For checking if cursor goes behind the from cursor.
@@ -48,7 +49,7 @@ namespace Glyph
                 }
             } else {
                 // Redraw.
-                Renderer.DrawChar(X, Y);
+                Renderer.DrawChar(X, Y); // FIXME?: error.
             }
             
             // Update Cursor position.
@@ -90,7 +91,7 @@ namespace Glyph
                     return false;
                 }
             }
-            index = -1;
+            index = -1; // TODO?: wont work with CreateSplit.
             return false;
         }
 
@@ -122,13 +123,12 @@ namespace Glyph
             if (!IsOnPartSplit(X, Y, out int start)) {
                 start = CreateSplit(start, X, Y);
             }
-            int length = Glyph.text[Y].Count - start; // FIXME: Also enters the last part thing
-            if (length <= 0) {
+            if (X == Renderer.GetLength(Y)) {
                 Glyph.text.Insert(Y+1, []);
                 Renderer.DrawChar(X, Y);
             } else {
                 List<StyledString> newLine = Glyph.text[Y].Skip(start).ToList();
-                Glyph.text[Y].RemoveRange(start, length);
+                Glyph.text[Y].RemoveRange(start, Glyph.text[Y].Count - start);
                 Glyph.text.Insert(Y+1, newLine);
                 int offset = X;
                 for (int pi = 0; pi < newLine.Count; pi++) {

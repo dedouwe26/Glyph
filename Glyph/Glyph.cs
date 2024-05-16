@@ -32,7 +32,7 @@ namespace Glyph
             ColorPaletteState = 2;
             Renderer.DrawPalette(Renderer.bgColors);
         }
-        internal static void ChooseColor(char key) {
+        internal static void ChooseColor(char key) { // TODO: fix text coloring.
             Color color;
             if (key=='.') {
                 colorPaletteCode="";
@@ -81,7 +81,7 @@ namespace Glyph
             ColorPaletteState = 0;
             colorPaletteCode = null;
         }
-        internal static void Bold() {
+        internal static void Bold() { // TODO: fix text decorations.
             if (Cursor.from.X == null || Cursor.from.Y == null) {return;}
             Cursor.Selection((StyledString old, int X, int Y) => {
                 old = old with { style = old.style with {Bold=!old.style.Bold}};
@@ -111,7 +111,18 @@ namespace Glyph
             Renderer.DrawChar(Cursor.from.X.Value, Cursor.from.Y.Value);
             Cursor.from=(null, null);
         }
-
+        internal static bool ColorsEqual(Color a, Color b) {
+            return a.trueColor == b.trueColor &&
+                   a.paletteColor == b.paletteColor &&
+                   a.tableColor == b.tableColor;
+        }
+        internal static bool StylesEqual(Style a, Style b) {
+            return (a.Italic == b.Italic) &&
+                   (a.Underline == b.Underline) &&
+                   (a.Bold == b.Bold) &&
+                   ColorsEqual(a.ForegroundColor, b.ForegroundColor) &&
+                   ColorsEqual(a.BackgroundColor, b.BackgroundColor);
+        }
         internal static void Type(ConsoleKey key, char keyChar, bool shift) {
             if (key == ConsoleKey.Escape) {
                 if (Cursor.from.X == null || Cursor.from.Y == null) {return;}
@@ -120,46 +131,64 @@ namespace Glyph
                 return;
             } else if (key == ConsoleKey.Enter) {
                 Cursor.NewLine();
-                Renderer.Draw(); // TODO: optimalisation
+                Renderer.Draw(); // TODO?: optimalisation
                 return;
-            } else if (key == ConsoleKey.Backspace) {
+            } else if (key == ConsoleKey.Backspace) { 
                 if (Cursor.X == 0) {
                     if (Cursor.Y == 0) {return;}
                     int nextX = Renderer.GetLength(Cursor.Y-1);
                     text[Cursor.Y-1].AddRange(text[Cursor.Y]);
-                    int length = Renderer.GetLength(Cursor.Y);
                     text.RemoveAt(Cursor.Y);
-                    for (int i = 0; i < length; i++) {
-                        Renderer.DrawChar(i, Cursor.Y);
-                    }
-                    Renderer.DrawChar(Cursor.X, Cursor.Y);
-                    Cursor.X = nextX;
-                    Cursor.Y--;
-                    Renderer.Draw();
-                } else { // FIXME: 
+                    Renderer.FullDraw();
+                    Cursor.UpdateCursor((nextX-Cursor.X, -1));
+                } else {
+                    int x = Cursor.X - 1;
                     int posInLine = 0;
                     for (int i = 0; i < text[Cursor.Y].Count; i++) {
                         StyledString str = text[Cursor.Y][i];
-                        if (Cursor.X < posInLine+str.text.Length && Cursor.X >= posInLine) {
-                            text[Cursor.Y][i] = str with { text = str.text.Remove(Cursor.X - posInLine, 1)} ;
+                        if (x < posInLine+str.text.Length && x >= posInLine) {
+                            if (str.text.Length == 1) {
+                                text[Cursor.Y].RemoveAt(i);
+                            } else {
+                                text[Cursor.Y][i] = str with { text = str.text.Remove(x - posInLine, 1)};
+                            }
                             break;
                         }
                         posInLine += str.text.Length;
                     }
+                    Renderer.DrawChar(text[Cursor.Y].Count, Cursor.Y); // Renders the last char, because DrawLine only draws what exists.
                     Renderer.DrawLine(Cursor.Y);
+                    Cursor.Left();
                 }
             } else if (!char.IsControl(keyChar)) {
-                StyledString? str = Renderer.GetStyledStringAt(Cursor.X-1 < 0 ? 0 : Cursor.X, Cursor.Y, out int? index);
+                int x = Cursor.X-1 < 0 ? 0 : Cursor.X;
+                string s = (shift ? char.ToUpper(keyChar) : keyChar).ToString();
+                StyledString? str = Renderer.GetStyledStringAt(x, Cursor.Y, out int? charIndex, out int? index);
                 if (str == null) {
-                    text[Cursor.Y].Add(new StyledString() { text = (shift ? char.ToUpper(keyChar) : keyChar).ToString() });
-                } else if (str.Value.style.Equals(default(Style))) {
+                    text[Cursor.Y].Add(new StyledString() { text = s });
+                } else if (StylesEqual(new Style(), str.Value.style) || StylesEqual(str.Value.style, new Style {BackgroundColor = Color.Black, ForegroundColor = Color.White})) {
                     str = text[Cursor.Y][index!.Value];
                     text[Cursor.Y][index!.Value] = new StyledString {
-                        text = str.Value.text.Insert((Cursor.X-1 < 0 ? 0 : Cursor.X)-index!.Value, (shift ? char.ToUpper(keyChar) : keyChar).ToString())
+                        text = str.Value.text.Insert(x-charIndex!.Value, s),
+                        style = new Style {
+                            ForegroundColor = Color.White,
+                            BackgroundColor = Color.Black
+                        }
                     };
+                } else {
+                    if (!Cursor.IsOnPartSplit(x, Cursor.Y, out int split)) {
+                        split = Cursor.CreateSplit(split, x, Cursor.Y);
+                    }
+                    text[Cursor.Y].Insert(split, new StyledString {
+                        text = str.Value.text.Insert(x-charIndex!.Value, s),
+                        style = new Style {
+                            ForegroundColor = Color.White,
+                            BackgroundColor = Color.Black
+                        }
+                    });
                 }
-                Cursor.Right();
                 Renderer.DrawLine(Cursor.Y);
+                Cursor.Right();
             }
         }
         

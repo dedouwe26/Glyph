@@ -3,10 +3,14 @@ using OxDED.Terminal;
 namespace Glyph
 {
     internal struct StyledString {
-        internal Style style;
-        internal string text;
+        internal Style style = new();
+        internal required string text;
+
+        public StyledString() { }
     }
     internal static class Renderer {
+        private const char FilledLineChar = '\u2503';
+        private const char EmptyLineChar  = '\u2507';
         internal static readonly Color[] fgColors = [Color.Green, Color.Red, Color.Blue, Color.LightRed, Color.DarkGreen, Color.DarkBlue, Color.Cyan, Color.Magenta, Color.Yellow, Color.Orange, new(128, 0, 128), Color.White, Color.Gray];
         internal static readonly Color[] bgColors = [Color.Green, Color.Red, Color.Blue, Color.LightRed, Color.DarkGreen, Color.DarkBlue, Color.Cyan, Color.Magenta, Color.Yellow, Color.Orange, new(128, 0, 128), Color.Black];
         internal static int FrameOffsetY {get{ return 1; }}
@@ -36,7 +40,7 @@ namespace Glyph
             return (FrameOffsetX+pos.x, FrameOffsetY+pos.y);
         }
         internal static void DrawLineNumber(int line, bool isFilled) {
-            Terminal.Set(GetLineNumber(line)+new string(' ', GetSpaces(line))+(isFilled ? '\u2503' : '\u2507'), (0, line+FrameOffsetY));
+            Terminal.Set(GetLineNumber(line)+new string(' ', GetSpaces(line))+(isFilled ? FilledLineChar : EmptyLineChar), (0, line+FrameOffsetY));
         }
         internal static int GetLength(int line) {
             int length = 0;
@@ -45,49 +49,31 @@ namespace Glyph
             }
             return length;
         }
-        // internal static List<StyledString> CreateDiff(List<StyledString> oldData, List<StyledString> newData) {
-        //     uint oldSize = 0;
-        //     for (int i = 0; i < oldData.Count; i++) {
-        //         oldSize+=Convert.ToUInt32(oldData[i].text.Length);
-        //     }
-        //     uint newSize = 0;
-        //     for (int i = 0; i < oldData.Count; i++) {
-        //         newSize+=Convert.ToUInt32(oldData[i].text.Length);
-        //     }
-        //     if (oldSize > newSize) {
-        //         for (int i = 0; i < oldData.Count; i++) {
-        //             StyledString oldStr = oldData[i];
-        //             for (int j = 0; j < str.text.Length; j++) {
-        //                 char oldChar = str.text[j];
-        //                 char? newChar = 
-        //             }
-        //         }
-        //     } else {
-        //         // TODO: new size first
-        //     }
-        // }
         internal static char? GetCharacter(int x, int y) {
-            StyledString? str = GetStyledStringAt(x, y, out int? i);
+            StyledString? str = GetStyledStringAt(x, y, out int? i, out int? _);
             if (i == null) {
                 return null;
             }
             return str?.text[x - i.Value];
         }
-        internal static StyledString? GetStyledStringAt(int x, int y, out int? indexInLine) {
+        internal static StyledString? GetStyledStringAt(int x, int y, out int? charIndexInLine, out int? indexInLine) {
             int i = 0;
             List<StyledString> line = Glyph.text.Count > y ? Glyph.text[y] : [];
-            foreach (StyledString part in line) {
+            for (int i1 = 0; i1 < line.Count; i1++) {
+                StyledString part = line[i1];
                 i += part.text.Length;
                 if (i > x) {
-                    indexInLine = i-part.text.Length;
+                    charIndexInLine = i-part.text.Length;
+                    indexInLine = i1;
                     return part;
                 }
             }
+            charIndexInLine = null;
             indexInLine = null;
             return null;
         }
         internal static Style? GetCharacterStyle(int x, int y) {
-            return GetStyledStringAt(x, y, out int? _)?.style;
+            return GetStyledStringAt(x, y, out int? _, out int? _)?.style;
         }
         internal static void DrawStyledString(StyledString str, int x, int y) {
             if (str.style.BackgroundColor == null) {
@@ -95,15 +81,8 @@ namespace Glyph
             }
             Terminal.Set(str.text, GetScreenPos((x, y)), str.style);
         }
-        internal static void DrawTextOnly() {
-            for (int line = FrameOffsetY; line < FrameSize.height; line++) {
-                if (Glyph.text.Count > line) {
-                    DrawLine(line);
-                }
-            }
-        }
         internal static void Draw() {
-            for (int line = 0; line < FrameSize.height-FrameOffsetY; line++) {
+            for (int line = 0; line < FrameSize.height; line++) {
                 if (Glyph.text.Count > line) {
                     if (!(Glyph.text[line].Count < 1)) {
                         if (!(Glyph.text[line][0].text.Length < 1)) {
@@ -162,6 +141,20 @@ namespace Glyph
             }
             DrawLine(0);
             DrawLine(1);
+        }
+        internal static void FullDraw() {
+            for (int line = 0; line < FrameSize.height; line++) {
+                if (Glyph.text.Count > line) {
+                    DrawLineNumber(line, true);
+                } else {
+                    DrawLineNumber(line, false);
+                }
+                for (int x = 0; x < FrameSize.width; x++) {
+                    DrawChar(x, line);
+                }
+            }
+            DrawCursor();
+            DrawFromCursor();
         }
         internal static void DrawHexCodePalette(string? colorPaletteCode) {
             if (colorPaletteCode==null) {return;}
