@@ -34,13 +34,13 @@ namespace Glyph
         }
         /// <param name="y">screen coord y</param>
         internal static int GetSpaces(int y) {
-            return (FrameOffsetY+Terminal.Height).ToString().Length-GetLineNumber(y).Length+1;
+            return (FrameOffsetY+Terminal.Height).ToString().Length-GetLineNumber(y-Scroll.Y).Length+1;
         }
         internal static (int x, int y) GetScreenPos((int x, int y) pos) {
             return (FrameOffsetX+pos.x, FrameOffsetY+pos.y);
         }
         internal static void DrawLineNumber(int line, bool isFilled) {
-            Terminal.Set(GetLineNumber(line)+new string(' ', GetSpaces(line))+(isFilled ? FilledLineChar : EmptyLineChar), (0, line+FrameOffsetY));
+            Terminal.Set(GetLineNumber(line)+new string(' ', GetSpaces(line+Scroll.Y))+(isFilled ? FilledLineChar : EmptyLineChar), (0, line+FrameOffsetY));
         }
         internal static int GetLength(int line) {
             int length = 0;
@@ -75,11 +75,8 @@ namespace Glyph
         internal static Style? GetCharacterStyle(int x, int y) {
             return GetStyledStringAt(x, y, out int? _, out int? _)?.style;
         }
-        internal static void DrawStyledString(StyledString str, int x, int y) {
-            if (str.style.BackgroundColor == null) {
-                
-            }
-            Terminal.Set(str.text, GetScreenPos((x, y)), str.style);
+        internal static void DrawStyledString(StyledString str, int x, int y) { // TODO: change all stuff
+            Terminal.Set(str.text, GetScreenPos((x, y)), str.style); 
         }
         internal static void Draw() {
             for (int line = 0; line < FrameSize.height; line++) {
@@ -98,10 +95,18 @@ namespace Glyph
             DrawFromCursor();
         }
         internal static void DrawLine(int line) {
-            int offset = 0;
-            List<StyledString> lineList = Glyph.text.Count > line ? Glyph.text[line] : [];
+            int offset = -Scroll.X;
+            List<StyledString> lineList = Glyph.text.Count > line+Scroll.Y ? Glyph.text[line+Scroll.Y] : [];
             foreach (StyledString str in lineList) {
-                DrawStyledString(str, offset, line);
+                if (offset < 0) {
+                    for (int i = offset; i < str.text.Length; i++) {
+                        if (!(i < 0)) {
+                            DrawChar(i, line);
+                        }
+                    }
+                } else {
+                    DrawStyledString(str, offset, line);
+                }
                 offset+=str.text.Length;
             }
         }
@@ -167,8 +172,8 @@ namespace Glyph
         internal static void ClearHexCodePalette() {
             Terminal.Set("      ", (0, 1));
             if (Glyph.text.Count > 0) {
-                if (Glyph.text[0].Count > 0) {
-                    if (Glyph.text[0][0].text.Length > 0) {
+                if (Glyph.text[Scroll.Y].Count > 0) {
+                    if (Glyph.text[Scroll.Y][0].text.Length > 0) {
                         DrawLineNumber(0, true);
                     } else {
                         DrawLineNumber(0, false);
@@ -187,7 +192,7 @@ namespace Glyph
             DrawChar(5, 0);
         }
         internal static void DrawChar(int x, int y) {
-            Terminal.Set(GetCharacter(x, y) ?? ' ', GetScreenPos((x, y)), GetCharacterStyle(x, y));
+            Terminal.Set(GetCharacter(x+Scroll.X, y+Scroll.Y) ?? ' ', GetScreenPos((x, y)), GetCharacterStyle(x+Scroll.X, y+Scroll.Y));
         }
         internal static void DrawFromCursor() {
             if (Cursor.from.Y != null && Cursor.from.X != null) {
@@ -195,7 +200,7 @@ namespace Glyph
             }
         }
         internal static void DrawCursor() {
-            Terminal.Set(GetCharacter(Cursor.X+Scroll.X, Cursor.Y+Scroll.Y) ?? ' ', GetScreenPos((Cursor.X+Scroll.X, Cursor.Y+Scroll.Y)), new Style{BackgroundColor = Cursor.CursorColor});
+            Terminal.Set(GetCharacter(Cursor.X, Cursor.Y) ?? ' ', GetScreenPos((Cursor.X-Scroll.X, Cursor.Y-Scroll.Y)), new Style{BackgroundColor = Cursor.CursorColor});
         }
     }
 }

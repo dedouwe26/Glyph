@@ -7,6 +7,12 @@ namespace Glyph
             if (X+offset.X < 0 || Y+offset.Y < 0) { return; }
             X+=offset.X;
             Y+=offset.Y;
+            if (Cursor.X-X < 0) {
+                Cursor.X = X;
+            }
+            if (Cursor.Y-Y < 0) {
+                Cursor.Y = Y;
+            }
             Renderer.FullDraw();
         }
     }

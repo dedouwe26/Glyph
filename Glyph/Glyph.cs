@@ -156,19 +156,20 @@ namespace Glyph
                         }
                         posInLine += str.text.Length;
                     }
-                    Renderer.DrawChar(text[Cursor.Y].Count, Cursor.Y); // Renders the last char, because DrawLine only draws what exists.
                     Renderer.DrawLine(Cursor.Y);
+                    Renderer.DrawChar(Renderer.GetLength(Cursor.Y), Cursor.Y);
                     Cursor.Left();
                 }
-            } else if (!char.IsControl(keyChar)) {
-                int x = Cursor.X-1 < 0 ? 0 : Cursor.X;
+            } else if (!char.IsControl(keyChar)) { // FIXME: fix with scroll. // FIXME: Fix with style after, because that is copied and unstyled.
+                int x = Cursor.X-1+Scroll.X < 0 ? 0 : Cursor.X+Scroll.X;
+                int y = Cursor.Y+Scroll.Y;
                 string s = (shift ? char.ToUpper(keyChar) : keyChar).ToString();
-                StyledString? str = Renderer.GetStyledStringAt(x, Cursor.Y, out int? charIndex, out int? index);
+                StyledString? str = Renderer.GetStyledStringAt(x, y, out int? charIndex, out int? index);
                 if (str == null) {
-                    text[Cursor.Y].Add(new StyledString() { text = s });
+                    text[y].Add(new StyledString() { text = s });
                 } else if (StylesEqual(new Style(), str.Value.style) || StylesEqual(str.Value.style, new Style {BackgroundColor = Color.Black, ForegroundColor = Color.White})) {
-                    str = text[Cursor.Y][index!.Value];
-                    text[Cursor.Y][index!.Value] = new StyledString {
+                    str = text[y][index!.Value];
+                    text[y][index!.Value] = new StyledString {
                         text = str.Value.text.Insert(x-charIndex!.Value, s),
                         style = new Style {
                             ForegroundColor = Color.White,

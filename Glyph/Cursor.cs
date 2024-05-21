@@ -19,24 +19,38 @@ namespace Glyph
             from = (X, Y);
             Terminal.Set(Renderer.GetCharacter(from.X.Value, from.Y.Value) ?? ' ', Renderer.GetScreenPos((from.X.Value, from.Y.Value)), new Style { BackgroundColor = Cursor.FromCursorColor });
         }
-        internal static void UpdateCursor((int X, int Y) offset) {
+        internal static void UpdateCursor((int X, int Y) offset) { //FIXME: still checking collision as if scroll: 0
+            int screenX = X-Scroll.X;
+            int screenY = Y-Scroll.Y;
+            int newX = X+offset.X;
+            int newY = Y+offset.Y;
+            
             // Check if out of bounds.
             // Y
              { if (
-                Y+offset.Y >= Glyph.text.Count || // cannot leave written text area.
-                Y+offset.Y < 0 || // Cannot go higher than highest.
+                newY >= Glyph.text.Count || // cannot leave written text area.
+                newY < Scroll.Y || // Cannot go higher than highest.
                 Y+Renderer.FrameOffsetY+offset.Y-Scroll.Y > Renderer.FrameSize.height // Cannot leave screen.
             )return; }
             // X
             if (
-                (offset.Y == 0 && X +offset.X > Renderer.GetLength(Y+offset.Y)) || // cannot leave written text area (for snap reasons: checking for offsetY == 0).
-                X+offset.X < 0 || // Cannot go higher than highest.
-                X+offset.X < 0 // Cannot leave screen.
+                (offset.Y == 0 && newX > Renderer.GetLength(newY)) || // cannot leave written text area (for snap reasons: checking for offsetY == 0).
+                newX > Renderer.FrameSize.width+Scroll.X || // Cannot go higher than highest.
+                newX < Scroll.X // Cannot leave screen.
             ) { return; } 
             
+            int length = Renderer.GetLength(newY);
+
+            if (newX >= length) {
+                if (
+                    length > Renderer.FrameSize.width+Scroll.X || // Cannot go higher than highest.
+                    length < Scroll.X // Cannot leave screen.
+                ) { return; } 
+            }
+
             // For checking if cursor goes behind the from cursor.
             if (from.Y != null && from.X != null) {
-                if (Y+offset.Y < from.Y.Value||(Y+offset.Y == from.Y.Value&&X+offset.X < from.X.Value)) { // Check if cursor gets behind from cursor
+                if (newY < from.Y.Value||(newY == from.Y.Value&&newX < from.X.Value)) { // Check if cursor gets behind from cursor
                     Renderer.DrawChar(from.X.Value, from.Y.Value);
                     from = (null, null);
                 }
@@ -44,17 +58,14 @@ namespace Glyph
             
             // Remove highlight from old place.
             if (X==from.X&&Y==from.Y) { // Check if the from cursor was there.
-                if (from.Y != null && from.X != null) { // For CodeAnalysis.
-                    Renderer.DrawFromCursor();
-                }
+                Renderer.DrawFromCursor();
             } else {
                 // Redraw.
-                Renderer.DrawChar(X, Y); // FIXME?: error.
+                Renderer.DrawChar(screenX, screenY); // FIXME?: error.
             }
             
             // Update Cursor position.
-            int length = Renderer.GetLength(Y+offset.Y);
-            if (X+offset.X >= length) {
+            if (newX >= length) {
                 X=length;
             } else {
                 X+=offset.X;

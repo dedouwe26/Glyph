@@ -2,6 +2,10 @@
 
 A console text editor with text decoration.
 
+## Using
+
+The usage: `Glyph [file]`
+
 ## Keybinds
 
 CTRL + X: exit \
