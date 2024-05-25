@@ -1,3 +1,9 @@
 +FF0000-00FF00{Hi}, [this] is a (test) file.
 +008000-000000And+FFFFFF ([this)] is the {second} line.
 +AA0000-008000{And+FFFFFF-000000} {([this})] is the {third} line.
+
+test, this should be green btw,
+but when you do this:
+ \- Nothing should happen:
+    * some illegal characters:
+         \-, \+, \(, \), \{, \}, \[, \], \\

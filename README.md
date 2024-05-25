@@ -8,6 +8,7 @@ The usage: `Glyph [file]`
 
 ## Keybinds
 
+CTRL + V: paste \
 CTRL + X: exit \
 CTRL + F: From \
 CTRL + W: Marker \

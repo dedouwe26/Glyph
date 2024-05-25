@@ -7,3 +7,4 @@ using System.Reflection;
 [assembly: AssemblyTitle("Glyph")]
 [assembly: AssemblyProduct("Glyph")]
 [assembly: AssemblyCompany("0xDED")]
+[assembly: AssemblyCulture("")]

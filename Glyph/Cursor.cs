@@ -3,7 +3,7 @@ using OxDED.Terminal;
 
 namespace Glyph
 {
-    internal delegate Style StyleChanger (StyledString oldStyle, int X, int Y);
+    internal delegate void StyleChanger (StyledString oldStyle, int X, int Y);
     internal static class Cursor {
         internal static readonly Color FromCursorColor = Color.DarkGray;
         internal static readonly Color CursorColor = new(128, 128, 128);
@@ -11,15 +11,18 @@ namespace Glyph
         internal static int Y = 0;
         internal static (int? X, int? Y) from = (null, null);
         internal static void From() {
-            if (Y > Glyph.text.Count-1 || Y < 0) {return;}
-            if (X > Glyph.text[Y].Count-1 || X < 0) {return;}
+            if (
+                Y > Glyph.text.Count-1 // Cannot leave screen
+                || Y < 0
+            ) {return;}
+            if (X > Renderer.GetLength(Y)-1 || X < 0) {return;}
             if (from.Y != null && from.X != null) {
                 Renderer.DrawChar(from.X.Value, from.Y.Value);
             }
             from = (X, Y);
-            Terminal.Set(Renderer.GetCharacter(from.X.Value, from.Y.Value) ?? ' ', Renderer.GetScreenPos((from.X.Value, from.Y.Value)), new Style { BackgroundColor = Cursor.FromCursorColor });
+            Renderer.DrawFromCursor();
         }
-        internal static void UpdateCursor((int X, int Y) offset) { //FIXME: still checking collision as if scroll: 0
+        internal static void UpdateCursor((int X, int Y) offset) {
             int screenX = X-Scroll.X;
             int screenY = Y-Scroll.Y;
             int newX = X+offset.X;
@@ -102,7 +105,7 @@ namespace Glyph
                     return false;
                 }
             }
-            index = -1; // TODO?: wont work with CreateSplit.
+            index = -1;
             return false;
         }
 
@@ -118,11 +121,11 @@ namespace Glyph
 
             StyledString left = new() {
                 text = original.text[..offsetInChars],
-                style = original.style
+                style = original.style.CloneStyle()
             };
             StyledString right = new() {
                 text = original.text[offsetInChars..],
-                style = original.style
+                style = original.style.CloneStyle()
             };
 
             Glyph.text[y].RemoveAt(part);
@@ -130,7 +133,7 @@ namespace Glyph
             return part+1;
         }
 
-        internal static void NewLine() {
+        internal static void NewLine() { // FIXME: takes previous too.
             if (!IsOnPartSplit(X, Y, out int start)) {
                 start = CreateSplit(start, X, Y);
             }
@@ -156,18 +159,17 @@ namespace Glyph
             if (from.X == null || from.Y == null) {return;}
 
             if (!IsOnPartSplit(from.X.Value, from.Y.Value, out int startX)) {
-                startX = CreateSplit(startX, from.X.Value, from.X.Value);
+                startX = CreateSplit(startX, from.X.Value, from.Y.Value);
             }
             if (!IsOnPartSplit(X, Y, out int endX)) {
-                endX = CreateSplit(endX, from.X.Value, from.X.Value);
+                endX = CreateSplit(endX, X, Y);
+            } else {
+                endX++;
             }
             for (int y = from.Y.Value; y < Y+1; y++) {
                 List<StyledString> line = Glyph.text[y];
-                for (int x = y==from.Y.Value ? startX : 0; x < (y==Y ? endX+1 : line.Count); x++) {
-                    StyledString part = line[x];
-                    Glyph.text[y][x] = part with {
-                        style = changer.Invoke(part, x, y)
-                    };
+                for (int x = y==from.Y.Value ? startX : 0; x < (y==Y ? endX : line.Count); x++) {
+                    changer.Invoke(line[x], x, y);
                 }
             }
         }

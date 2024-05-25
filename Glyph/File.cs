@@ -14,7 +14,7 @@ namespace Glyph
             }
         }}
 
-        private static readonly char[] specialChars = ['{', '}', '(', ')', '[', ']', '+', '-', '\\'];
+        private static readonly char[] specialChars = ['\\', '{', '}', '(', ')', '[', ']', '+', '-'];
 
         internal List<List<StyledString>> Parse() {
             List<List<StyledString>> result = [[]];
@@ -32,38 +32,47 @@ namespace Glyph
                         char[] buffer = new char[6];
                         stream.Read(buffer, 0, 6);
                         state.fg = new Color(new string(buffer));
+                        previousChar = currentChar;
                         continue;
                     } else if (currentChar == '-') {
                         char[] buffer = new char[6];
                         stream.Read(buffer, 0, 6);
                         state.bg = new Color(new string(buffer));
+                        previousChar = currentChar;
                         continue;
                     } else if (currentChar == '{') {
                         state.bold = true;
+                        previousChar = currentChar;
                         continue;
                     } else if (currentChar == '}') {
                         state.bold = false;
+                        previousChar = currentChar;
                         continue;
                     } else if (currentChar == '(') {
                         state.itallic = true;
+                        previousChar = currentChar;
                         continue;
                     } else if (currentChar == ')') {
                         state.itallic = false;
+                        previousChar = currentChar;
                         continue;
                     } else if (currentChar == '[') {
                         state.underlined = true;
+                        previousChar = currentChar;
                         continue;
                     } else if (currentChar == ']') {
                         state.underlined = false;
+                        previousChar = currentChar;
                         continue;
                     }
                 }
                 canStyle = (previousChar=='\\' && currentChar=='\\')||(currentChar!='\\');
-                if (currentChar == '\\'&&previousChar != '\\') {
+                if (currentChar == '\\' && previousChar != '\\') {
+                    previousChar = currentChar;
                     continue;
                 }
 
-                if (currentChar == '\n') { result.Add([]); continue; }
+                if (currentChar == '\n') { result.Add([]); previousChar = currentChar; continue; }
 
                 Style style = new() { BackgroundColor = state.bg, ForegroundColor = state.fg, Bold = state.bold, Italic = state.itallic, Underline = state.underlined};
                 if (result[^1].Count <= 0) {
@@ -74,6 +83,7 @@ namespace Glyph
                 } else {
                     result[^1].Add(new StyledString { text = currentChar.ToString(), style = style });
                 }
+                previousChar = currentChar;
             }
             return result;
         }
@@ -83,10 +93,10 @@ namespace Glyph
             foreach (List<StyledString> line in characters) {
                 foreach (StyledString part in line) {
                     if (part.style.ForegroundColor != state.fg) {
-                        stream.Write("+"+part.style.ForegroundColor.ToString());
+                        stream.Write("+"+part.style.ForegroundColor.ToHex());
                         state.fg = part.style.ForegroundColor;
                     } if (part.style.BackgroundColor != state.bg) {
-                        stream.Write("-"+part.style.BackgroundColor.ToString());
+                        stream.Write("-"+part.style.ForegroundColor.ToHex());
                         state.bg = part.style.BackgroundColor;
                     } if (part.style.Bold != state.bold) {
                         stream.Write(part.style.Bold ? '{' : '}');

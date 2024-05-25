@@ -32,11 +32,11 @@ namespace Glyph
             ColorPaletteState = 2;
             Renderer.DrawPalette(Renderer.bgColors);
         }
-        internal static void ChooseColor(char key) { // TODO: fix text coloring.
+        internal static void ChooseColor(char key) { // TODO: fix text coloring > 9: 1 less.
             Color color;
             if (key=='.') {
                 colorPaletteCode="";
-                Renderer.ClearPalette();
+                Renderer.ClearPalette(ColorPaletteState==1);
                 Renderer.DrawHexCodePalette(colorPaletteCode);
                 return;
             } else {
@@ -50,10 +50,11 @@ namespace Glyph
                     }
                     catch (FormatException) {
                         if (colorPaletteCode == null) {
-                            Renderer.ClearPalette();
+                            Renderer.ClearPalette(ColorPaletteState==1);
                         } else {
                             Renderer.ClearHexCodePalette();
                         }
+                        Renderer.DrawChar(Cursor.from.X!.Value, Cursor.from.Y!.Value);
                         Cursor.from = (null, null);
                         ColorPaletteState = 0;
                         colorPaletteCode = null;
@@ -65,28 +66,30 @@ namespace Glyph
             }
             if (ColorPaletteState == 1) {
                 Cursor.Selection((StyledString old, int X, int Y) => {
-                    return old.style with {ForegroundColor = color};
+                    old.style.ForegroundColor = color;
+                    Renderer.DrawStyledStringAtTextCoord(old, X, Y);
                 });
             } else {
                 Cursor.Selection((StyledString old, int X, int Y) => {
-                    return old.style with {BackgroundColor = color};
+                    old.style.BackgroundColor = color;
+                    Renderer.DrawStyledStringAtTextCoord(old, X, Y);
                 });
             }
             if (colorPaletteCode == null) {
-                Renderer.ClearPalette();
+                Renderer.ClearPalette(ColorPaletteState==1);
             } else {
                 Renderer.ClearHexCodePalette();
             }
+            Renderer.DrawChar(Cursor.from.X!.Value, Cursor.from.Y!.Value);
             Cursor.from = (null, null);
             ColorPaletteState = 0;
             colorPaletteCode = null;
         }
-        internal static void Bold() { // TODO: fix text decorations.
+        internal static void Bold() {
             if (Cursor.from.X == null || Cursor.from.Y == null) {return;}
             Cursor.Selection((StyledString old, int X, int Y) => {
-                old = old with { style = old.style with {Bold=!old.style.Bold}};
-                Renderer.DrawStyledString(old, X, Y);
-                return old.style;
+                old.style.Bold = !old.style.Bold;
+                Renderer.DrawStyledStringAtTextCoord(old, X, Y);
             });
             Renderer.DrawChar(Cursor.from.X.Value, Cursor.from.Y.Value);
             Cursor.from=(null, null);
@@ -94,9 +97,8 @@ namespace Glyph
         internal static void Itallic() {
             if (Cursor.from.X == null || Cursor.from.Y == null) {return;}
             Cursor.Selection((StyledString old, int X, int Y) => {
-                old = old with { style = old.style with {Italic=!old.style.Italic}};
-                Renderer.DrawStyledString(old, X, Y);
-                return old.style;
+                old.style.Italic = !old.style.Italic;
+                Renderer.DrawStyledStringAtTextCoord(old, X, Y);
             });
             Renderer.DrawChar(Cursor.from.X.Value, Cursor.from.Y.Value);
             Cursor.from=(null, null);
@@ -104,24 +106,11 @@ namespace Glyph
         internal static void Underline() {
             if (Cursor.from.X == null || Cursor.from.Y == null) {return;}
             Cursor.Selection((StyledString old, int X, int Y) => {
-                old = old with { style = old.style with {Underline=!old.style.Underline}};
-                Renderer.DrawStyledString(old, X, Y);
-                return old.style;
+                old.style.Underline = !old.style.Underline;
+                Renderer.DrawStyledStringAtTextCoord(old, X, Y);
             });
             Renderer.DrawChar(Cursor.from.X.Value, Cursor.from.Y.Value);
             Cursor.from=(null, null);
-        }
-        internal static bool ColorsEqual(Color a, Color b) {
-            return a.trueColor == b.trueColor &&
-                   a.paletteColor == b.paletteColor &&
-                   a.tableColor == b.tableColor;
-        }
-        internal static bool StylesEqual(Style a, Style b) {
-            return (a.Italic == b.Italic) &&
-                   (a.Underline == b.Underline) &&
-                   (a.Bold == b.Bold) &&
-                   ColorsEqual(a.ForegroundColor, b.ForegroundColor) &&
-                   ColorsEqual(a.BackgroundColor, b.BackgroundColor);
         }
         internal static void Type(ConsoleKey key, char keyChar, bool shift) {
             if (key == ConsoleKey.Escape) {
@@ -157,19 +146,18 @@ namespace Glyph
                         posInLine += str.text.Length;
                     }
                     Renderer.DrawLine(Cursor.Y);
-                    Renderer.DrawChar(Renderer.GetLength(Cursor.Y), Cursor.Y);
+                    Renderer.DrawChar(Renderer.GetLength(Cursor.Y)-Scroll.X, Cursor.Y);
                     Cursor.Left();
                 }
-            } else if (!char.IsControl(keyChar)) { // FIXME: fix with scroll. // FIXME: Fix with style after, because that is copied and unstyled.
-                int x = Cursor.X-1+Scroll.X < 0 ? 0 : Cursor.X+Scroll.X;
-                int y = Cursor.Y+Scroll.Y;
+            } else if (!char.IsControl(keyChar)) {
+                int x = Cursor.X-1 < 0 ? 0 : Cursor.X;
                 string s = (shift ? char.ToUpper(keyChar) : keyChar).ToString();
-                StyledString? str = Renderer.GetStyledStringAt(x, y, out int? charIndex, out int? index);
+                StyledString? str = Renderer.GetStyledStringAt(x, Cursor.Y, out int? charIndex, out int? index);
                 if (str == null) {
-                    text[y].Add(new StyledString() { text = s });
-                } else if (StylesEqual(new Style(), str.Value.style) || StylesEqual(str.Value.style, new Style {BackgroundColor = Color.Black, ForegroundColor = Color.White})) {
-                    str = text[y][index!.Value];
-                    text[y][index!.Value] = new StyledString {
+                    text[Cursor.Y].Add(new StyledString() { text = s, style = new Style { ForegroundColor = Color.White, BackgroundColor = Color.Black} });
+                } else if (str.Value.style == new Style {BackgroundColor = Color.Black, ForegroundColor = Color.White}) {
+                    str = text[Cursor.Y][index!.Value];
+                    text[Cursor.Y][index!.Value] = new StyledString {
                         text = str.Value.text.Insert(x-charIndex!.Value, s),
                         style = new Style {
                             ForegroundColor = Color.White,
@@ -181,7 +169,7 @@ namespace Glyph
                         split = Cursor.CreateSplit(split, x, Cursor.Y);
                     }
                     text[Cursor.Y].Insert(split, new StyledString {
-                        text = str.Value.text.Insert(x-charIndex!.Value, s),
+                        text = s,
                         style = new Style {
                             ForegroundColor = Color.White,
                             BackgroundColor = Color.Black

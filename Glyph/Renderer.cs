@@ -75,8 +75,27 @@ namespace Glyph
         internal static Style? GetCharacterStyle(int x, int y) {
             return GetStyledStringAt(x, y, out int? _, out int? _)?.style;
         }
-        internal static void DrawStyledString(StyledString str, int x, int y) { // TODO: change all stuff
+        internal static void DrawStyledString(StyledString str, int x, int y) {
             Terminal.Set(str.text, GetScreenPos((x, y)), str.style); 
+        }
+        internal static void DrawStyledStringAtTextCoord(StyledString str, int x, int y) {
+            int offset = -Scroll.X;
+            for (int i = 0; i < x; i++) {
+                offset+=Glyph.text[y][i].text.Length;
+            }
+            y -= Scroll.Y;
+            if (y < 0) {
+                return;
+            }
+            if (offset < 0) {
+                for (int i = offset; i < str.text.Length; i++) {
+                    if (!(i < 0)) {
+                        DrawChar(i, y);
+                    }
+                }
+            } else {
+                DrawStyledString(str, offset, y);
+            }
         }
         internal static void Draw() {
             for (int line = 0; line < FrameSize.height; line++) {
@@ -117,7 +136,9 @@ namespace Glyph
             }
             Terminal.Set(" . ", (0, 2), new Style{BackgroundColor = new(64, 64, 64), ForegroundColor = Color.White});
         }
-        internal static void ClearPalette() {
+        internal static void ClearPalette(bool fg) { // FIXME: clear it
+            Terminal.Set(new string(' ', (fg ? fgColors : bgColors).Length * 3), (0, 1));
+            Terminal.Set("   ", (0, 2));
             if (Glyph.text.Count > 0) {
                 if (Glyph.text[0].Count > 0) {
                     if (Glyph.text[0][0].text.Length > 0) {
@@ -161,7 +182,7 @@ namespace Glyph
             DrawCursor();
             DrawFromCursor();
         }
-        internal static void DrawHexCodePalette(string? colorPaletteCode) {
+        internal static void DrawHexCodePalette(string? colorPaletteCode) { // FIXME: clear it
             if (colorPaletteCode==null) {return;}
             string val
                 = new Color(128, 0, 0).ToBackgroundANSI()+new string([colorPaletteCode.Length >= 1 ? colorPaletteCode[0] : ' ', colorPaletteCode.Length >= 2 ? colorPaletteCode[1] : ' '])
@@ -196,7 +217,7 @@ namespace Glyph
         }
         internal static void DrawFromCursor() {
             if (Cursor.from.Y != null && Cursor.from.X != null) {
-                Terminal.Set(GetCharacter(Cursor.from.X.Value+Scroll.X, Cursor.from.Y.Value+Scroll.Y) ?? ' ', GetScreenPos((Cursor.from.X.Value, Cursor.from.Y.Value)), new Style{BackgroundColor = Cursor.FromCursorColor});
+                Terminal.Set(GetCharacter(Cursor.from.X.Value, Cursor.from.Y.Value) ?? ' ', GetScreenPos((Cursor.from.X.Value-Scroll.X, Cursor.from.Y.Value-Scroll.Y)), new Style{BackgroundColor = Cursor.FromCursorColor});
             }
         }
         internal static void DrawCursor() {
