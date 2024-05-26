@@ -90,7 +90,7 @@ namespace Glyph
             UpdateCursor((0, 1));
         }
 
-        internal static bool IsOnPartSplit(int x, int y, out int index) {
+        internal static bool IsOnPartSplit(int x, int y, out int index) { // FIXME: see Selection(...)
             if (x == 0) { index = 0; return true; }
             List<StyledString> line = Glyph.text[y];
             int splitLine = 0;
@@ -168,7 +168,7 @@ namespace Glyph
             }
             for (int y = from.Y.Value; y < Y+1; y++) {
                 List<StyledString> line = Glyph.text[y];
-                for (int x = y==from.Y.Value ? startX : 0; x < (y==Y ? endX : line.Count); x++) {
+                for (int x = y==from.Y.Value ? startX : 0; x < (y==Y ? endX : line.Count); x++) { // FIXME: end X or endX +1
                     changer.Invoke(line[x], x, y);
                 }
             }
