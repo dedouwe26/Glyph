@@ -8,6 +8,7 @@
     <PublishSingleFile>true</PublishSingleFile>
     <SelfContained>true</SelfContained>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <PublishReadyToRun>False</PublishReadyToRun>
     <PublishTrimmed>true</PublishTrimmed>
     <EnableNETAnalyzers>true</EnableNETAnalyzers>
   </PropertyGroup>
