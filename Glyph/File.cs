@@ -20,7 +20,7 @@ namespace Glyph
             List<List<StyledString>> result = [[]];
             using StreamReader stream = new(Path);
             (Color bg, Color fg, bool bold, bool itallic, bool underlined) state = (Color.Black, Color.White, false, false, false);
-            char previousChar = '\0';
+            char? previousChar = null;
             bool canStyle = (previousChar=='\\' && stream.Peek()=='\\')||(stream.Peek()!='\\');
             while (stream.Peek() >= 0) {
                 char currentChar = (char)stream.Read();
@@ -92,11 +92,12 @@ namespace Glyph
             (Color bg, Color fg, bool bold, bool itallic, bool underlined) state = (Color.Black, Color.White, false, false, false);
             foreach (List<StyledString> line in characters) {
                 foreach (StyledString part in line) {
+                    part.style.BackgroundColor = part.style.BackgroundColor==Colors.Default ? Color.Black : part.style.BackgroundColor;
                     if (part.style.ForegroundColor != state.fg) {
                         stream.Write("+"+part.style.ForegroundColor.ToHex());
                         state.fg = part.style.ForegroundColor;
                     } if (part.style.BackgroundColor != state.bg) {
-                        stream.Write("-"+part.style.ForegroundColor.ToHex());
+                        stream.Write("-"+part.style.BackgroundColor.ToHex());
                         state.bg = part.style.BackgroundColor;
                     } if (part.style.Bold != state.bold) {
                         stream.Write(part.style.Bold ? '{' : '}');

@@ -90,7 +90,7 @@ namespace Glyph
             UpdateCursor((0, 1));
         }
 
-        internal static bool IsOnPartSplit(int x, int y, out int index) { // FIXME: see Selection(...)
+        internal static bool IsOnPartSplit(int x, int y, out int index) {
             if (x == 0) { index = 0; return true; }
             List<StyledString> line = Glyph.text[y];
             int splitLine = 0;
@@ -98,7 +98,7 @@ namespace Glyph
                 StyledString part = line[i];
                 splitLine += part.text.Length;
                 if (x==splitLine) {
-                    index = i;
+                    index = i+1;
                     return true;
                 } else if (x<splitLine) {
                     index = i;
@@ -133,7 +133,7 @@ namespace Glyph
             return part+1;
         }
 
-        internal static void NewLine() { // FIXME: takes previous too.
+        internal static void NewLine() {
             if (!IsOnPartSplit(X, Y, out int start)) {
                 start = CreateSplit(start, X, Y);
             }
@@ -152,8 +152,12 @@ namespace Glyph
                     }
                 }
             }
-            X = 0;
-            Y++;
+            UpdateCursor((-X, 1));
+            if (Glyph.text.Count > Y+1) {
+                Renderer.FullDraw();
+            } else {
+                Renderer.Draw();
+            }
         }
         internal static void Selection(StyleChanger changer) {
             if (from.X == null || from.Y == null) {return;}
@@ -163,12 +167,10 @@ namespace Glyph
             }
             if (!IsOnPartSplit(X, Y, out int endX)) {
                 endX = CreateSplit(endX, X, Y);
-            } else {
-                endX++;
             }
             for (int y = from.Y.Value; y < Y+1; y++) {
                 List<StyledString> line = Glyph.text[y];
-                for (int x = y==from.Y.Value ? startX : 0; x < (y==Y ? endX : line.Count); x++) { // FIXME: end X or endX +1
+                for (int x = y==from.Y.Value ? startX : 0; x < (y==Y ? endX : line.Count); x++) {
                     changer.Invoke(line[x], x, y);
                 }
             }

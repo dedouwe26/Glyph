@@ -120,7 +120,6 @@ namespace Glyph
                 return;
             } else if (key == ConsoleKey.Enter) {
                 Cursor.NewLine();
-                Renderer.Draw(); // TODO?: optimalisation
                 return;
             } else if (key == ConsoleKey.Backspace) { 
                 if (Cursor.X == 0) {
@@ -128,7 +127,11 @@ namespace Glyph
                     int nextX = Renderer.GetLength(Cursor.Y-1);
                     text[Cursor.Y-1].AddRange(text[Cursor.Y]);
                     text.RemoveAt(Cursor.Y);
-                    Renderer.FullDraw();
+                    if (text.Count > Cursor.Y+1) {
+                        Renderer.FullDraw();
+                    } else {
+                        Renderer.Draw();
+                    }
                     Cursor.UpdateCursor((nextX-Cursor.X, -1));
                 } else {
                     int x = Cursor.X - 1;
@@ -149,13 +152,13 @@ namespace Glyph
                     Renderer.DrawChar(Renderer.GetLength(Cursor.Y)-Scroll.X, Cursor.Y);
                     Cursor.Left();
                 }
-            } else if (!char.IsControl(keyChar)) {
+            } else if (!char.IsControl(keyChar)) { // FIXME: make it add to previous.
                 int x = Cursor.X-1 < 0 ? 0 : Cursor.X;
                 string s = (shift ? char.ToUpper(keyChar) : keyChar).ToString();
-                StyledString? str = Renderer.GetStyledStringAt(x, Cursor.Y, out int? charIndex, out int? index);
-                if (str == null) {
+                StyledString? str = Renderer.GetStyledStringAt(x-1, Cursor.Y, out int? charIndex, out int? index);
+                if (str == null) { // here
                     text[Cursor.Y].Add(new StyledString() { text = s, style = new Style { ForegroundColor = Color.White, BackgroundColor = Color.Black} });
-                } else if (str.Value.style == new Style {BackgroundColor = Color.Black, ForegroundColor = Color.White}) {
+                } else if (str.Value.style == new Style {BackgroundColor = Color.Black, ForegroundColor = Color.White}||str.Value.style == new Style {BackgroundColor = Colors.Default, ForegroundColor = Color.White}) {
                     str = text[Cursor.Y][index!.Value];
                     text[Cursor.Y][index!.Value] = new StyledString {
                         text = str.Value.text.Insert(x-charIndex!.Value, s),
