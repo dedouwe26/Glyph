@@ -1,12 +1,12 @@
 using System.Dynamic;
-using OxDED.Terminal;
+using LambdaKit.Terminal;
 
 namespace Glyph
 {
     internal delegate void StyleChanger (StyledString oldStyle, int X, int Y);
     internal static class Cursor {
-        internal static readonly Color FromCursorColor = Color.DarkGray;
-        internal static readonly Color CursorColor = new(128, 128, 128);
+        internal static readonly RGBColor FromCursorRGBColor = RGBColor.DarkGray;
+        internal static readonly RGBColor CursorRGBColor = new(128, 128, 128);
         internal static int X = 0;
         internal static int Y = 0;
         internal static (int? X, int? Y) from = (null, null);

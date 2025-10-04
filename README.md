@@ -12,7 +12,7 @@ CTRL + V: paste \
 CTRL + X: exit \
 CTRL + F: From \
 CTRL + W: Marker \
-CTRL + E: Text Color \
+CTRL + E: Text RGBColor \
 CTRL + Z: Save \
 CTRL + B: Bold \
 CTRL + I: Italic \

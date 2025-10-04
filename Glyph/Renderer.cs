@@ -1,4 +1,4 @@
-using OxDED.Terminal;
+using LambdaKit.Terminal;
 
 namespace Glyph
 {
@@ -11,8 +11,8 @@ namespace Glyph
     internal static class Renderer {
         private const char FilledLineChar = '\u2503';
         private const char EmptyLineChar  = '\u2507';
-        internal static readonly Color[] fgColors = [Color.Green, Color.Red, Color.Blue, Color.LightRed, Color.DarkGreen, Color.DarkBlue, Color.Cyan, Color.Magenta, Color.Yellow, Color.Orange, new(128, 0, 128), Color.White, Color.Gray];
-        internal static readonly Color[] bgColors = [Color.Green, Color.Red, Color.Blue, Color.LightRed, Color.DarkGreen, Color.DarkBlue, Color.Cyan, Color.Magenta, Color.Yellow, Color.Orange, new(128, 0, 128), Color.Black];
+        internal static readonly RGBColor[] fgRGBColors = [RGBColor.Green, RGBColor.Red, RGBColor.Blue, RGBColor.LightRed, RGBColor.DarkGreen, RGBColor.DarkBlue, RGBColor.Cyan, RGBColor.Magenta, RGBColor.Yellow, RGBColor.Orange, new(128, 0, 128), RGBColor.White, RGBColor.Gray];
+        internal static readonly RGBColor[] bgRGBColors = [RGBColor.Green, RGBColor.Red, RGBColor.Blue, RGBColor.LightRed, RGBColor.DarkGreen, RGBColor.DarkBlue, RGBColor.Cyan, RGBColor.Magenta, RGBColor.Yellow, RGBColor.Orange, new(128, 0, 128), RGBColor.Black];
         internal static int FrameOffsetY {get{ return 1; }}
         /// <summary>
         /// (size of row numbers)
@@ -23,9 +23,8 @@ namespace Glyph
         /// </summary>
         internal static (uint width, uint height) FrameSize {get {return ((uint)(Terminal.Width-FrameOffsetX), (uint)(Terminal.Height-FrameOffsetY));}}
         internal static void Init(string fileName) {
-            Terminal.Clear();
-            Terminal.Set("Glyph", (0, 0), new Style{Bold = true, ForegroundColor = Color.Orange});
-            Terminal.Set(fileName, (Console.WindowWidth/2+1-fileName.Length/2, 0), new Style{Bold = true, ForegroundColor = Color.White});
+            Terminal.Set("Glyph", (0, 0), new Style{Bold = true, ForegroundColor = RGBColor.Orange});
+            Terminal.Set(fileName, (Console.WindowWidth/2+1-fileName.Length/2, 0), new Style{Bold = true, ForegroundColor = RGBColor.White});
             Draw();
         }
         /// <param name="y">screen coord y</param>
@@ -77,7 +76,7 @@ namespace Glyph
         }
         internal static void DrawStyledString(StyledString str, int x, int y) {
             Style style = str.style;
-            style.BackgroundColor = style.BackgroundColor == Color.Black ? Colors.Default : style.BackgroundColor;
+            style.BackgroundColor = style.BackgroundColor == RGBColor.Black ? PalleteColor.Default : style.BackgroundColor;
             Terminal.Set(str.text, GetScreenPos((x, y)), style); 
         }
         internal static void DrawStyledStringAtTextCoord(StyledString str, int x, int y) {
@@ -131,15 +130,15 @@ namespace Glyph
                 offset+=str.text.Length;
             }
         }
-        internal static void DrawPalette(Color[] colors) {
-            for (int i = 0; i < colors.Length; i++) {
+        internal static void DrawPalette(RGBColor[] RGBColors) {
+            for (int i = 0; i < RGBColors.Length; i++) {
                 char symbol = (char)(i+'a');
-                Terminal.Set($" {symbol} ", (i*3, 1), new Style{BackgroundColor = colors[i], ForegroundColor = Color.White});
+                Terminal.Set($" {symbol} ", (i*3, 1), new Style{BackgroundColor = RGBColors[i], ForegroundColor = RGBColor.White});
             }
-            Terminal.Set(" . ", (0, 2), new Style{BackgroundColor = new(64, 64, 64), ForegroundColor = Color.White});
+            Terminal.Set(" . ", (0, 2), new Style{BackgroundColor = new RGBColor(64, 64, 64), ForegroundColor = RGBColor.White});
         }
         internal static void ClearPalette(bool fg) {
-            Terminal.Set(new string(' ', (fg ? fgColors : bgColors).Length * 3), (0, 1));
+            Terminal.Set(new string(' ', (fg ? fgRGBColors : bgRGBColors).Length * 3), (0, 1));
             Terminal.Set("   ", (0, 2));
             if (Glyph.text.Count > 0) {
                 if (Glyph.text[0].Count > 0) {
@@ -184,12 +183,12 @@ namespace Glyph
             DrawCursor();
             DrawFromCursor();
         }
-        internal static void DrawHexCodePalette(string? colorPaletteCode) {
-            if (colorPaletteCode==null) {return;}
+        internal static void DrawHexCodePalette(string? RGBColorPaletteCode) {
+            if (RGBColorPaletteCode==null) {return;}
             string val
-                = new Color(128, 0, 0).ToBackgroundANSI()+new string([colorPaletteCode.Length >= 1 ? colorPaletteCode[0] : ' ', colorPaletteCode.Length >= 2 ? colorPaletteCode[1] : ' '])
-                + new Color(0, 128, 0).ToBackgroundANSI()+new string([colorPaletteCode.Length >= 3 ? colorPaletteCode[2] : ' ', colorPaletteCode.Length >= 4 ? colorPaletteCode[3] : ' '])
-                + new Color(0, 0, 128).ToBackgroundANSI()+new string([colorPaletteCode.Length >= 5 ? colorPaletteCode[4] : ' ', colorPaletteCode.Length >= 6 ? colorPaletteCode[5] : ' ']);
+                = new RGBColor(128, 0, 0).ToBackgroundANSI()+new string([RGBColorPaletteCode.Length >= 1 ? RGBColorPaletteCode[0] : ' ', RGBColorPaletteCode.Length >= 2 ? RGBColorPaletteCode[1] : ' '])
+                + new RGBColor(0, 128, 0).ToBackgroundANSI()+new string([RGBColorPaletteCode.Length >= 3 ? RGBColorPaletteCode[2] : ' ', RGBColorPaletteCode.Length >= 4 ? RGBColorPaletteCode[3] : ' '])
+                + new RGBColor(0, 0, 128).ToBackgroundANSI()+new string([RGBColorPaletteCode.Length >= 5 ? RGBColorPaletteCode[4] : ' ', RGBColorPaletteCode.Length >= 6 ? RGBColorPaletteCode[5] : ' ']);
             Terminal.Set(val, (0, 1));
         }
         internal static void ClearHexCodePalette() {
@@ -216,16 +215,16 @@ namespace Glyph
         }
         internal static void DrawChar(int x, int y) {
             Style style = GetCharacterStyle(x+Scroll.X, y+Scroll.Y) ?? new Style();
-            style.BackgroundColor = style.BackgroundColor == Color.Black ? Colors.Default : style.BackgroundColor;
+            style.BackgroundColor = style.BackgroundColor == RGBColor.Black ? PalleteColor.Default : style.BackgroundColor;
             Terminal.Set(GetCharacter(x+Scroll.X, y+Scroll.Y) ?? ' ', GetScreenPos((x, y)), style);
         }
         internal static void DrawFromCursor() {
             if (Cursor.from.Y != null && Cursor.from.X != null) {
-                Terminal.Set(GetCharacter(Cursor.from.X.Value, Cursor.from.Y.Value) ?? ' ', GetScreenPos((Cursor.from.X.Value-Scroll.X, Cursor.from.Y.Value-Scroll.Y)), new Style{BackgroundColor = Cursor.FromCursorColor});
+                Terminal.Set(GetCharacter(Cursor.from.X.Value, Cursor.from.Y.Value) ?? ' ', GetScreenPos((Cursor.from.X.Value-Scroll.X, Cursor.from.Y.Value-Scroll.Y)), new Style{BackgroundColor = Cursor.FromCursorRGBColor});
             }
         }
         internal static void DrawCursor() {
-            Terminal.Set(GetCharacter(Cursor.X, Cursor.Y) ?? ' ', GetScreenPos((Cursor.X-Scroll.X, Cursor.Y-Scroll.Y)), new Style{BackgroundColor = Cursor.CursorColor});
+            Terminal.Set(GetCharacter(Cursor.X, Cursor.Y) ?? ' ', GetScreenPos((Cursor.X-Scroll.X, Cursor.Y-Scroll.Y)), new Style{BackgroundColor = Cursor.CursorRGBColor});
         }
     }
 }

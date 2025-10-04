@@ -14,7 +14,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="0xDED.Terminal" Version="3.1.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="LambdaKit.Terminal" Version="5.0.1" />
   </ItemGroup>
 
 </Project>

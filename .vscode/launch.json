@@ -8,7 +8,7 @@
             "name": "Debug",
             "type": "coreclr",
             "request": "launch",
-            "preLaunchTask": "dotnet: build",
+            "preLaunchTask": "Glyph: Build",
             "program": "${workspaceFolder}\\Glyph\\bin\\Debug\\net8.0\\win-x64\\Glyph.dll",
             "args": ["test.txt"],
             "cwd": "${workspaceFolder}\\Glyph",

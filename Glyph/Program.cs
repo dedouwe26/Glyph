@@ -1,4 +1,4 @@
-﻿using OxDED.Terminal;
+﻿using LambdaKit.Terminal;
 
 namespace Glyph
 {
@@ -15,7 +15,7 @@ namespace Glyph
 
             Glyph.Load(args[0]);
 
-            Terminal.blockCancelKey = true;
+            Terminal.BlockCancelKey = true;
             
             Glyph.Setup();
 
@@ -30,11 +30,11 @@ namespace Glyph
                     Terminal.ListenForKeys = false;
                     return;
                 }
-                if (Glyph.ColorPaletteState!=0) {return;}
+                if (Glyph.RGBColorPaletteState!=0) {return;}
                 if (key == ConsoleKey.Z) {
                     Glyph.Save();
                 } else if (key == ConsoleKey.E) {
-                    Glyph.ShowColorPalette();
+                    Glyph.ShowRGBColorPalette();
                 } else if (key == ConsoleKey.W) {
                     Glyph.ShowMarkerPalette();
                 } else if (key == ConsoleKey.F) {
@@ -47,8 +47,8 @@ namespace Glyph
                     Glyph.Underline();
                 }
             } else if (!alt) {
-                if (Glyph.ColorPaletteState!=0) {
-                    Glyph.ChooseColor(keyChar);
+                if (Glyph.RGBColorPaletteState!=0) {
+                    Glyph.ChooseRGBColor(keyChar);
                 } else if (shift) {
                     if (key == ConsoleKey.UpArrow) {
                         Scroll.Update((0, -1));

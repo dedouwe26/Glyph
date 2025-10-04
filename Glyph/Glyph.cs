@@ -1,11 +1,11 @@
 using System.Globalization;
-using OxDED.Terminal;
+using LambdaKit.Terminal;
 
 namespace Glyph
 {
     internal static class Glyph {
-        internal static byte ColorPaletteState = 0;
-        private static string? colorPaletteCode = null;
+        internal static byte RGBColorPaletteState = 0;
+        private static string? RGBColorPaletteCode = null;
         private static File? file;
         internal static File File { get { return file ?? throw new Exception("No file loaded"); } }
         private static Timer? timer;
@@ -16,74 +16,74 @@ namespace Glyph
         }
         internal static void Save() {
             File.Write(text);
-                Terminal.Set("Saved", (0, 0), new Style{ForegroundColor = Color.Orange, BackgroundColor=new Color(1, 16, 41), Bold=true});
+                Terminal.Set("Saved", (0, 0), new Style{ForegroundColor = RGBColor.Orange, BackgroundColor=new RGBColor(1, 16, 41), Bold=true});
             timer = new((_) => {
                 timer!.Dispose();
-                Terminal.Set("Glyph", (0, 0), new Style{ForegroundColor = Color.Orange, BackgroundColor=new Color(1, 16, 41), Bold=true});
+                Terminal.Set("Glyph", (0, 0), new Style{ForegroundColor = RGBColor.Orange, BackgroundColor=new RGBColor(1, 16, 41), Bold=true});
             }, null, TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(-1));
         }
-        internal static void ShowColorPalette() {
+        internal static void ShowRGBColorPalette() {
             if (Cursor.from==(null, null)) { return; }
-            ColorPaletteState = 1;
-            Renderer.DrawPalette(Renderer.fgColors);
+            RGBColorPaletteState = 1;
+            Renderer.DrawPalette(Renderer.fgRGBColors);
         }
         internal static void ShowMarkerPalette() {
             if (Cursor.from==(null, null)) { return; }
-            ColorPaletteState = 2;
-            Renderer.DrawPalette(Renderer.bgColors);
+            RGBColorPaletteState = 2;
+            Renderer.DrawPalette(Renderer.bgRGBColors);
         }
-        internal static void ChooseColor(char key) { // TODO: fix text coloring > 9: 1 less.
-            Color color;
+        internal static void ChooseRGBColor(char key) { // TODO: fix text RGBColoring > 9: 1 less.
+            RGBColor RGBColor;
             if (key=='.') {
-                colorPaletteCode="";
-                Renderer.ClearPalette(ColorPaletteState==1);
-                Renderer.DrawHexCodePalette(colorPaletteCode);
+                RGBColorPaletteCode="";
+                Renderer.ClearPalette(RGBColorPaletteState==1);
+                Renderer.DrawHexCodePalette(RGBColorPaletteCode);
                 return;
             } else {
-                if (colorPaletteCode==null) {
-                    color = ColorPaletteState==1 ? Renderer.fgColors[key-'a'] : Renderer.bgColors[key-'a'];
+                if (RGBColorPaletteCode==null) {
+                    RGBColor = RGBColorPaletteState==1 ? Renderer.fgRGBColors[key-'a'] : Renderer.bgRGBColors[key-'a'];
                 } else {
-                    colorPaletteCode += key;
-                    if (colorPaletteCode.Length != 6) { Renderer.DrawHexCodePalette(colorPaletteCode); return; }
+                    RGBColorPaletteCode += key;
+                    if (RGBColorPaletteCode.Length != 6) { Renderer.DrawHexCodePalette(RGBColorPaletteCode); return; }
                     try {
-                        color = new(byte.Parse(colorPaletteCode[..2], NumberStyles.HexNumber), byte.Parse(colorPaletteCode.Substring(2, 2), NumberStyles.HexNumber), byte.Parse(colorPaletteCode.Substring(4, 2), NumberStyles.HexNumber));
+                        RGBColor = new(byte.Parse(RGBColorPaletteCode[..2], NumberStyles.HexNumber), byte.Parse(RGBColorPaletteCode.Substring(2, 2), NumberStyles.HexNumber), byte.Parse(RGBColorPaletteCode.Substring(4, 2), NumberStyles.HexNumber));
                     }
                     catch (FormatException) {
-                        if (colorPaletteCode == null) {
-                            Renderer.ClearPalette(ColorPaletteState==1);
+                        if (RGBColorPaletteCode == null) {
+                            Renderer.ClearPalette(RGBColorPaletteState==1);
                         } else {
                             Renderer.ClearHexCodePalette();
                         }
                         Renderer.DrawChar(Cursor.from.X!.Value, Cursor.from.Y!.Value);
                         Cursor.from = (null, null);
-                        ColorPaletteState = 0;
-                        colorPaletteCode = null;
+                        RGBColorPaletteState = 0;
+                        RGBColorPaletteCode = null;
                         return;
                     }
                     
-                    colorPaletteCode = null;
+                    RGBColorPaletteCode = null;
                 }
             }
-            if (ColorPaletteState == 1) {
+            if (RGBColorPaletteState == 1) {
                 Cursor.Selection((StyledString old, int X, int Y) => {
-                    old.style.ForegroundColor = color;
+                    old.style.ForegroundColor = RGBColor;
                     Renderer.DrawStyledStringAtTextCoord(old, X, Y);
                 });
             } else {
                 Cursor.Selection((StyledString old, int X, int Y) => {
-                    old.style.BackgroundColor = color;
+                    old.style.BackgroundColor = RGBColor;
                     Renderer.DrawStyledStringAtTextCoord(old, X, Y);
                 });
             }
-            if (colorPaletteCode == null) {
-                Renderer.ClearPalette(ColorPaletteState==1);
+            if (RGBColorPaletteCode == null) {
+                Renderer.ClearPalette(RGBColorPaletteState==1);
             } else {
                 Renderer.ClearHexCodePalette();
             }
             Renderer.DrawChar(Cursor.from.X!.Value, Cursor.from.Y!.Value);
             Cursor.from = (null, null);
-            ColorPaletteState = 0;
-            colorPaletteCode = null;
+            RGBColorPaletteState = 0;
+            RGBColorPaletteCode = null;
         }
         internal static void Bold() {
             if (Cursor.from.X == null || Cursor.from.Y == null) {return;}
@@ -157,14 +157,14 @@ namespace Glyph
                 string s = (shift ? char.ToUpper(keyChar) : keyChar).ToString();
                 StyledString? str = Renderer.GetStyledStringAt(x-1, Cursor.Y, out int? charIndex, out int? index);
                 if (str == null) { // here
-                    text[Cursor.Y].Add(new StyledString() { text = s, style = new Style { ForegroundColor = Color.White, BackgroundColor = Color.Black} });
-                } else if (str.Value.style == new Style {BackgroundColor = Color.Black, ForegroundColor = Color.White}||str.Value.style == new Style {BackgroundColor = Colors.Default, ForegroundColor = Color.White}) {
+                    text[Cursor.Y].Add(new StyledString() { text = s, style = new Style { ForegroundColor = RGBColor.White, BackgroundColor = RGBColor.Black} });
+                } else if (str.Value.style == new Style {BackgroundColor = RGBColor.Black, ForegroundColor = RGBColor.White}||str.Value.style == new Style {BackgroundColor = PalleteColor.Default, ForegroundColor = RGBColor.White}) {
                     str = text[Cursor.Y][index!.Value];
                     text[Cursor.Y][index!.Value] = new StyledString {
                         text = str.Value.text.Insert(x-charIndex!.Value, s),
                         style = new Style {
-                            ForegroundColor = Color.White,
-                            BackgroundColor = Color.Black
+                            ForegroundColor = RGBColor.White,
+                            BackgroundColor = RGBColor.Black
                         }
                     };
                 } else {
@@ -174,8 +174,8 @@ namespace Glyph
                     text[Cursor.Y].Insert(split, new StyledString {
                         text = s,
                         style = new Style {
-                            ForegroundColor = Color.White,
-                            BackgroundColor = Color.Black
+                            ForegroundColor = RGBColor.White,
+                            BackgroundColor = RGBColor.Black
                         }
                     });
                 }
@@ -186,12 +186,16 @@ namespace Glyph
         
         internal static void Setup() {
             Terminal.HideCursor = true;
-            Terminal.Clear();
-            Renderer.Init(File.Name);
+			Terminal.UseAltScreenAndSaveCursor();
+			Terminal.ClearAll();
+			Terminal.ClearScreen();
+			Renderer.Init(File.Name);
         }
         internal static void Exit() {
-            Terminal.Clear();
-            Terminal.HideCursor = false;
+			Terminal.ClearAll();
+			Terminal.ClearScreen();
+			Terminal.UseNormScreenAndRestoreCursor();
+			Terminal.HideCursor = false;
         }
     }
 }
