@@ -1,79 +1,35 @@
-﻿using LambdaKit.Terminal;
+using LambdaKit.Terminal.Arguments;
 
-namespace Glyph
-{
-    internal static class Program {
-        internal static void Main(string[] args) {
-            if (args.Length != 1) {
-                Console.WriteLine("Usage: Glyph [file]");
-                return;
-            }
-            if (!System.IO.File.Exists(args[0])) {
-                Console.WriteLine($"File not found: {args[0]}");
-                return;
-            }
+namespace Glyph;
 
-            Glyph.Load(args[0]);
+static class Program {
+	internal static async Task Main(string[] args) {
+		ArgumentParser parser = new ArgumentFormatter()
+			.Name("Glyph").Version("3.0.0")
+			.Description("Glyph is a console text editor with text decorations.")
 
-            Terminal.BlockCancelKey = true;
-            
-            Glyph.Setup();
+			.General()
+				.Argument()
+					.Name("Path")
+					.Description("The path to the file to open.")
+				.Finish()
+				.VersionOption().Finish()
+				.HelpOption().Finish()
+			.Finish()
+		.Finish();
+		parser.Parse(args);
 
-            Terminal.OnKeyPress += OnCommand;
-            Terminal.ListenForKeys = true; // Does not block flow
-        }
+		string path = parser.GetArgument(0)!.Content;
+		if (!System.IO.File.Exists(path)) {
+			Console.WriteLine($"File not found: {path}");
+			Environment.Exit(1);
+			return;
+		}
 
-        internal static void OnCommand(ConsoleKey key, char keyChar, bool alt, bool shift, bool control) {
-            if (control) {
-                if (key == ConsoleKey.X) {
-                    Glyph.Exit();
-                    Terminal.ListenForKeys = false;
-                    return;
-                }
-                if (Glyph.RGBColorPaletteState!=0) {return;}
-                if (key == ConsoleKey.Z) {
-                    Glyph.Save();
-                } else if (key == ConsoleKey.E) {
-                    Glyph.ShowRGBColorPalette();
-                } else if (key == ConsoleKey.W) {
-                    Glyph.ShowMarkerPalette();
-                } else if (key == ConsoleKey.F) {
-                    Cursor.From();
-                } else if (key == ConsoleKey.B) {
-                    Glyph.Bold();
-                } else if (key == ConsoleKey.I) {
-                    Glyph.Itallic();
-                } else if (key == ConsoleKey.U) {
-                    Glyph.Underline();
-                }
-            } else if (!alt) {
-                if (Glyph.RGBColorPaletteState!=0) {
-                    Glyph.ChooseRGBColor(keyChar);
-                } else if (shift) {
-                    if (key == ConsoleKey.UpArrow) {
-                        Scroll.Update((0, -1));
-                    } else if (key == ConsoleKey.DownArrow) {
-                        Scroll.Update((0, 1));
-                    } else if (key == ConsoleKey.LeftArrow) {
-                        Scroll.Update((-1, 0));
-                    } else if (key == ConsoleKey.RightArrow) {
-                        Scroll.Update((1, 0));
-                    } else {
-                        Glyph.Type(key, keyChar, shift);
-                    }
-                } else if (key == ConsoleKey.UpArrow) {
-                    Cursor.Up();
-                } else if (key == ConsoleKey.DownArrow) {
-                     Cursor.Down();
-                } else if (key == ConsoleKey.LeftArrow) {
-                     Cursor.Left();
-                } else if (key == ConsoleKey.RightArrow) {
-                     Cursor.Right();
-                } else {
-                    Glyph.Type(key, keyChar, shift);
-                }
-                
-            }
-        }
-    }
+		await Glyph.Initialize(path);
+
+		await Task.Delay(1000*6);
+
+		Glyph.Stop();
+	}
 }

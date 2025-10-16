@@ -14,10 +14,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="LambdaKit.Terminal" Version="5.0.1" />
+    <PackageReference Include="LambdaKit.Terminal" Version="5.0.3" />
+    <PackageReference Include="Microsoft.NET.ILLink.Tasks" Version="8.0.20" />
   </ItemGroup>
 
 </Project>

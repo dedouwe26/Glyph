@@ -1,124 +1,131 @@
-using System.Runtime.InteropServices;
 using LambdaKit.Terminal;
 
-namespace Glyph
-{
-    internal class File(string path)
-    {
-        internal string Path = path;
-        internal string Name {get {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
-                return Path.Split('\\').Last();
-            } else {
-                return Path.Split('/').Last();
-            }
-        }}
+namespace Glyph;
 
-        private static readonly char[] specialChars = ['\\', '{', '}', '(', ')', '[', ']', '+', '-'];
+public struct Fragment {
+	public required Style style;
+	public required string text;
+}
 
-        internal List<List<StyledString>> Parse() {
-            List<List<StyledString>> result = [[]];
-            using StreamReader stream = new(Path);
-            (RGBColor bg, RGBColor fg, bool bold, bool itallic, bool underlined) = (RGBColor.Black, RGBColor.White, false, false, false);
-            char? previousChar = null;
-            bool canStyle = (previousChar=='\\' && stream.Peek()=='\\')||(stream.Peek()!='\\');
-            while (stream.Peek() >= 0) {
-                char currentChar = (char)stream.Read();
-                if (char.IsControl(currentChar)&&currentChar!='\n') {
-                    continue;
-                }
-                if (canStyle) {
-                    if (currentChar == '+') {
-                        char[] buffer = new char[6];
-                        stream.Read(buffer, 0, 6);
-                        fg = new RGBColor(new string(buffer));
-                        previousChar = currentChar;
-                        continue;
-                    } else if (currentChar == '-') {
-                        char[] buffer = new char[6];
-                        stream.Read(buffer, 0, 6);
-                        bg = new RGBColor(new string(buffer));
-                        previousChar = currentChar;
-                        continue;
-                    } else if (currentChar == '{') {
-                        bold = true;
-                        previousChar = currentChar;
-                        continue;
-                    } else if (currentChar == '}') {
-                        bold = false;
-                        previousChar = currentChar;
-                        continue;
-                    } else if (currentChar == '(') {
-                        itallic = true;
-                        previousChar = currentChar;
-                        continue;
-                    } else if (currentChar == ')') {
-                        itallic = false;
-                        previousChar = currentChar;
-                        continue;
-                    } else if (currentChar == '[') {
-                        underlined = true;
-                        previousChar = currentChar;
-                        continue;
-                    } else if (currentChar == ']') {
-                        underlined = false;
-                        previousChar = currentChar;
-                        continue;
-                    }
-                }
-                canStyle = (previousChar=='\\' && currentChar=='\\')||(currentChar!='\\');
-                if (currentChar == '\\' && previousChar != '\\') {
-                    previousChar = currentChar;
-                    continue;
-                }
+public class File {
+	public static async ValueTask<File> Load(string path) {
+		using StreamReader stream = new(path);
 
-                if (currentChar == '\n') { result.Add([]); previousChar = currentChar; continue; }
+		List<List<Fragment>> result = [[]];
+		Fragment fragment = new() {
+			style = new() {
+				ForegroundColor = RGBColor.White,
+				BackgroundColor = RGBColor.Black
+			},
+			text = ""
+		};
+		void ResetFragment() {
+			if (fragment.text != "") {
+				result[^1].Add(fragment);
+				fragment.style = fragment.style.CloneStyle();
+				fragment.text = "";
+			}
+		}
 
-                Style style = new() { BackgroundColor = bg, ForegroundColor = fg, Bold = bold, Italic = itallic, Underline = underlined};
-                if (result[^1].Count <= 0) {
-                    result[^1].Add(new StyledString { text = currentChar.ToString(), style = style });
-                } else if (result[^1][^1].style.Equals(style)) {
-                    StyledString last = result[^1][^1];
-                    result[^1][^1] = last with { text = last.text+currentChar };
-                } else {
-                    result[^1].Add(new StyledString { text = currentChar.ToString(), style = style });
-                }
-                previousChar = currentChar;
-            }
-            return result;
-        }
-        internal void Write(List<List<StyledString>> characters) {
-            using StreamWriter stream = new(Path);
-            (RGBColor bg, RGBColor fg, bool bold, bool itallic, bool underlined) = (RGBColor.Black, RGBColor.White, false, false, false);
-            foreach (List<StyledString> line in characters) {
-                foreach (StyledString part in line) {
-                    part.style.BackgroundColor = part.style.BackgroundColor==PalleteColor.Default ? RGBColor.Black : part.style.BackgroundColor;
-                    if (part.style.ForegroundColor != fg) {
-						RGBColor cast = (part.style.ForegroundColor as RGBColor)!;
-						stream.Write("+"+cast.ToHex());
-                        fg = cast;
-                    } if (part.style.BackgroundColor != bg) {
-						RGBColor cast = (part.style.BackgroundColor as RGBColor)!;
-                        stream.Write("-"+cast.ToHex());
-                        bg = cast;
-                    } if (part.style.Bold != bold) {
-                        stream.Write(part.style.Bold ? '{' : '}');
-                        bold = part.style.Bold;
-                    } if (part.style.Italic != itallic) {
-                        stream.Write(part.style.Italic ? '(' : ')');
-                        itallic = part.style.Italic;
-                    } if (part.style.Underline != underlined) {
-                        stream.Write(part.style.Underline ? '[' : ']');
-                        underlined = part.style.Underline;
-                    }
-                    string str = part.text;
-                    foreach (char special in specialChars) {
-                        str = str.Replace(special.ToString(), "\\"+special);
-                    }
-                    stream.Write(str);
-                }
-                stream.Write('\n');
-            }
-        }
-    }
+		char[] buffer = new char[1];
+		char currentChar;
+
+		while ((await stream.ReadAsync(buffer))>0) {
+			currentChar = buffer[0];
+			if (char.IsControl(currentChar)&&currentChar!='\n') {
+				continue;
+			}
+			switch (currentChar) {
+				case '+':
+					buffer = new char[6];
+					ValueTask<int> task = stream.ReadAsync(buffer);
+					ResetFragment();
+					if (await task <= 0) { break; }
+					fragment.style.ForegroundColor = new RGBColor(new string(buffer));
+					if (fragment.style.ForegroundColor.Equals(RGBColor.White)) fragment.style.ForegroundColor = StandardColor.Default;
+					buffer = new char[1];
+					break;
+				case '-':
+					buffer = new char[6];
+					task = stream.ReadAsync(buffer);
+					ResetFragment();
+					if (await task <= 0) { break; }
+					fragment.style.BackgroundColor = new RGBColor(new string(buffer));
+					if (fragment.style.BackgroundColor.Equals(RGBColor.Black)) fragment.style.BackgroundColor = StandardColor.Default;
+					buffer = new char[1];
+					break;
+				case '{':
+					ResetFragment();
+					fragment.style.Bold = true;
+					break;
+				case '}':
+					ResetFragment();
+					fragment.style.Bold = false;
+					break;
+				case '(':
+					ResetFragment();
+					fragment.style.Italic = true;
+					break;
+				case ')':
+					ResetFragment();
+					fragment.style.Italic = false;
+					break;
+				case '[':
+					ResetFragment();
+					fragment.style.Underline = true;
+					break;
+				case ']':
+					ResetFragment();
+					fragment.style.Underline = false;
+					break;
+				case '\n':
+					ResetFragment();
+					result.Add([]);
+					break;
+				case '\\':
+					if (await stream.ReadAsync(buffer) <= 0) { break; }
+					if (buffer[0] == '\n') goto case '\n';
+					fragment.text += buffer[0];
+					break;
+				default:
+					fragment.text += currentChar;
+					break;
+			}
+		}
+		if (fragment.text!=null) {
+			result[^1].Add(fragment);
+		}
+		return new(path, result);
+	}
+	public readonly string path;
+	public string Name { get => Path.GetFileName(path); }
+	public List<List<Fragment>> content;
+	private File(string filepath, List<List<Fragment>> lines) {
+		path = filepath;
+		content = lines;
+	}
+
+	public bool LineExists(int line) => content.Count > line;
+
+	public (char, Style)? GetCharacter((int x, int y) textPos) {
+		Fragment? fragment = GetFragment(textPos, out int? pos, out int? _);
+		if (fragment == null) return null;
+		return (fragment.Value.text[textPos.x - pos!.Value], fragment.Value.style);
+	}
+	public Fragment? GetFragment((int x, int y) textPos, out int? fragmentPosition, out int? fragmentIndex) {
+		int length = 0;
+		List<Fragment> line = content.Count > textPos.y ? content[textPos.y] : [];
+		for (int fragIndex = 0; fragIndex < line.Count; fragIndex++) {
+			Fragment fragment = line[fragIndex];
+			length += fragment.text.Length;
+			if (length > textPos.x) {
+				fragmentPosition = length-fragment.text.Length;
+				fragmentIndex = fragIndex;
+				return fragment;
+			}
+		}
+		fragmentPosition = null;
+		fragmentIndex = null;
+		return null;
+	}
 }
